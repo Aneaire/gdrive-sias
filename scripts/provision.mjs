@@ -4,7 +4,7 @@
  * Phase B buyer-provisioning script.
  *
  * Usage:
- *   npm run provision -- \
+ *   bun run provision -- \
  *     --name="Acme Surveying" \
  *     --subdomain=acme \
  *     --seats=5 \
@@ -17,9 +17,9 @@
  *   --notes="Annual license, paid by wire"
  *   --issued-by="you@yourdomain.com"
  *
- * Invokes `npx convex run provisioning:provision <jsonArgs>` against the
+ * Invokes `bunx convex run provisioning:provision <jsonArgs>` against the
  * deployment this repo is linked to (.env.local CONVEX_DEPLOYMENT).
- * Only the platform operator can run `npx convex run`; that privilege IS
+ * Only the platform operator can run `bunx convex run`; that privilege IS
  * the authentication here. There is no Stripe and no self-service signup.
  *
  * Result: prints a buyer-facing summary block with the license key, subdomain
@@ -53,7 +53,7 @@ const jsonArgs = {
 }
 
 const result = spawnSync(
-  'npx',
+  'bunx',
   ['convex', 'run', 'provisioning:provision', JSON.stringify(jsonArgs)],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
 )
@@ -124,7 +124,7 @@ function printSummary(r) {
   console.log(`       ${installUrl}`)
   console.log()
   console.log('Revoke later via:')
-  console.log(`  npx convex run licenseHttp:revoke <{"licenseKey":"${r.licenseKey}"}> \\`)
+  console.log(`  bunx convex run licenseHttp:revoke <{"licenseKey":"${r.licenseKey}"}> \\`)
   console.log('     (will require the licensor\'s superadmin token on the web admin')
   console.log('     dashboard once it ships in Phase G)')
   console.log('────────────────────────────────────────────────────────────────')
@@ -136,7 +136,7 @@ function apexDomain() {
 
 function printUsage() {
   console.error('Usage:')
-  console.error('  npm run provision -- --name="Acme Surveying" --subdomain=acme \\')
+  console.error('  bun run provision -- --name="Acme Surveying" --subdomain=acme \\')
   console.error('    --seats=5 --plan=office --admin-email=admin@acme.example')
   console.error()
   console.error('Optional:')

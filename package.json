@@ -6,29 +6,35 @@
     "apps/web",
     "apps/desktop"
   ],
+  "overrides": {
+    "nf3": "0.3.17"
+  },
   "scripts": {
-    "dev": "concurrently -n convex,web -c green,blue \"npm:dev:convex\" \"npm:dev:web\"",
-    "dev:web": "npm --workspace @gcustomize/web run dev",
-    "dev:desktop": "concurrently -n web,desktop -c blue,magenta \"npm:dev:web\" \"npm --workspace @gcustomize/desktop run dev\"",
-    "desktop": "npm --workspace @gcustomize/desktop run dev",
-    "build": "npm run build:web && node scripts/copy-vercel-output.mjs",
-    "build:web": "npm --workspace @gcustomize/web run build",
-    "build:desktop": "npm run build:web && npm --workspace @gcustomize/desktop run dist",
-    "preview": "npm --workspace @gcustomize/web run preview",
-    "test": "npm --workspace @gcustomize/web run test",
+    "dev": "concurrently -n convex,web -c green,blue \"bun run dev:convex\" \"bun run dev:web\"",
+    "dev:web": "cd apps/web && bun run dev",
+    "dev:desktop": "concurrently -n web,desktop -c blue,magenta \"bun run dev:web\" \"cd apps/desktop && bun run dev\"",
+    "desktop": "cd apps/desktop && bun run dev",
+    "build": "bun run build:web && bun scripts/copy-vercel-output.mjs",
+    "build:web": "cd apps/web && bun run build",
+    "build:desktop": "bun run build:web && cd apps/desktop && bun run dist",
+    "preview": "cd apps/web && bun run preview",
+    "test": "cd apps/web && bun run test",
     "dev:convex": "convex dev",
-    "convex:dev": "npm run dev:convex",
+    "convex:dev": "bun run dev:convex",
     "convex:codegen": "convex codegen --typecheck disable",
     "convex:deploy": "convex deploy",
-    "provision": "node scripts/provision.mjs",
-    "seed": "node scripts/seed.mjs"
+    "provision": "bun scripts/provision.mjs",
+    "seed": "bun scripts/seed.mjs"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "concurrently": "^10.0.0",
-    "convex": "^1.42.0"
+    "convex": "^1.42.0",
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
-    "@convex-dev/auth": "^0.0.93"
+    "@convex-dev/auth": "^0.0.93",
+    "nitro": "npm:nitro-nightly@^3.0.1-20260529-064703-255b254f"
   }
 }

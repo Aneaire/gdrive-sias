@@ -241,6 +241,23 @@ export const wipeTenantBySubdomain = mutation({
       .collect()
     for (const row of auditRows) await ctx.db.delete(row._id)
 
+    // Clean up orphaned users whose only membership was this tenant.
+    // (v1 has no multi-tenant users, so any user admin-email-matching this
+    // tenant and no other tenantMembers row can be safely removed.)
+    for (const member of memberRows) {
+      if (!member.userId) continue
+      const otherMemberships = await ctx.db
+        .query('tenantMembers')
+        .withIndex('by_user', (q) => q.eq('userId', member.userId!))
+        .collect()
+      const hasOtherActiveMembership = otherMemberships.some(
+        (row) => row._id !== member._id && row.tenantId !== tenantId,
+      )
+      if (!hasOtherActiveMembership) {
+        await ctx.db.delete(member.userId!)
+      }
+    }
+
     await ctx.db.delete(tenantId)
     return { wiped: true, tenantId }
   },

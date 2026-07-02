@@ -6,7 +6,7 @@
  * end-to-end verification in one shot.
  *
  * Usage:
- *   npm run seed -- --subdomain=acme --name="Acme Surveying" --admin-email=admin@acme.test
+ *   bun run seed -- --subdomain=acme --name="Acme Surveying" --admin-email=admin@acme.test
  *
  * Defaults: --seats=5 --plan=office
  * Auto-generates the license key when --key is omitted.
@@ -28,12 +28,12 @@ const jsonArgs = {
   licenseKey: args.key ?? generateLicenseKey(),
   adminEmail: args['admin-email'] ?? `admin@${args.subdomain ?? 'acme'}.test`,
   saleRef: 'SEED-' + Date.now(),
-  notes: 'Seeded via npm run seed (Phase A verification).',
+  notes: 'Seeded via bun run seed (Phase A verification).',
   issuedBy: 'seed.mjs',
 }
 
 const result = spawnSync(
-  'npx',
+  'bunx',
   ['convex', 'run', 'provisioning:provision', JSON.stringify(jsonArgs)],
   { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
 )

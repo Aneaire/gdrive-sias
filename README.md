@@ -29,24 +29,45 @@ vercel.json                Vercel deploy config
 
 Scaffold complete. Remaining manual steps to finish Phase A:
 
-1. Create + link a fresh Convex deployment by running in your terminal:
+1. Install dependencies + create + link a fresh Convex deployment by running in your terminal:
 
    ```bash
-   npm install
-   npx convex dev
+   bun install
+   bunx convex dev
    ```
 
-   `npx convex dev` is interactive — it will prompt you to create a new project (you're already logged in per the plan). On success, `.env.local` is populated with `CONVEX_DEPLOYMENT` and `VITE_CONVEX_URL`, and `convex/_generated/` is created.
+   `bunx convex dev` is interactive — it will prompt you to create a new project (you're already logged in per the plan). On success, `.env.local` is populated with `CONVEX_DEPLOYMENT` and `VITE_CONVEX_URL`, and `convex/_generated/` is created.
 
 2. Run the TypeScript codegen step (re-runs automatically on `convex dev`, but useful for a clean first sync):
 
    ```bash
-   npm run convex:codegen
+   bun run convex:codegen
    ```
 
-3. Seed a test tenant via `npm run seed -- --subdomain=acme --name="Acme Surveying" --admin-email=admin@acme.test`. The script prints the exact Convex mutation to run from the dashboard (Phase A is schema-only — Phase B automates this via the provision script).
+3. Seed a test tenant via `bun run seed -- --subdomain=acme --name="Acme Surveying" --admin-email=admin@acme.test`. The script prints the exact Convex mutation to run from the dashboard (Phase A is schema-only — Phase B automates this via the provision script).
 
 4. Sign up via the web app using the seeded admin email (after Phase E's auth landing page; for now you can drive the join mutation from the Convex dashboard). `api.tenants.current` should return the seeded tenant; `api.files.list` should return `[]` scoped to that tenant.
+
+## Running
+
+Start both Convex and the web app in one command:
+
+```bash
+bun install
+bun dev
+```
+
+- Convex dev server: hot-reloads `convex/` on save
+- Web app: http://localhost:3000
+
+Separate pieces:
+
+```bash
+bun run dev:convex     # only Convex
+bun run dev:web        # only the web app
+bun run dev:desktop     # web + Electron
+bun run desktop        # only Electron
+```
 
 ## Phase A scope (what's done now)
 
@@ -56,7 +77,7 @@ Scaffold complete. Remaining manual steps to finish Phase A:
 - Superadmin allowlist (`convex/superAdmins.ts`): seeded with `aneaire010@gmail.com` for the Phase B `/license/revoke` kill switch.
 - Auth and existing product functions ported to tenant scoping: `files.ts` (list, listByScope, search, stats, desktopSync, create*, remove), `shareRecipients.ts`, `deviceSyncStates.ts`, `tenantIntegrations.ts` (disconnect only — full Connect-Drive flow lands in Phase D), `tenants.ts` (getBySubdomain, current, capabilities, brandingForAdmin), `audits.ts`.
 - Web workspace shell (TanStack Start + Vite + Tailwind) with a stub home route; Phase C replaces it with the subdomain resolver + branded file command center.
-- Desktop shell (minimal Electron) wired for `npm run dev:desktop`. Phase B introduces the license-activation first run; Phase D wires the offline SQLite sync.
+- Desktop shell (minimal Electron) wired for `bun run dev:desktop`. Phase B introduces the license-activation first run; Phase D wires the offline SQLite sync.
 - Mobile workspace scaffolded but not in the active workspaces list (Phase F).
 - Scripts: `copy-vercel-output.mjs`, `provision.mjs` (stub), `seed.mjs`.
 
@@ -71,7 +92,7 @@ Scaffold complete. Remaining manual steps to finish Phase A:
 
 ## Environment
 
-See [`.env.example`](./.env.example) for the four server-side secrets Convex will need once Phase D ships. For Phase A verification, only the two Convex deployment values (`CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL`) are required, and `npx convex dev` writes them automatically.
+See [`.env.example`](./.env.example) for the four server-side secrets Convex will need once Phase D ships. For Phase A verification, only the two Convex deployment values (`CONVEX_DEPLOYMENT`, `VITE_CONVEX_URL`) are required, and `bunx convex dev` writes them automatically.
 
 ## Legacy note
 

@@ -3,6 +3,7 @@
   "include": [
     "apps/web/src/**/*.ts",
     "apps/web/src/**/*.tsx",
+    "apps/web/node_modules/vite/client.d.ts",
     "convex/**/*.ts"
   ],
   "exclude": ["node_modules", "apps/desktop/dist", "apps/mobile/.expo", "apps/mobile/node_modules"],
@@ -14,6 +15,10 @@
       "@/*": ["./apps/web/src/*"],
       "@convex/*": ["./convex/*"]
     },
-    "types": ["vite/client", "node"]
+    "typeRoots": [
+      "./apps/web/node_modules/@types",
+      "./node_modules/@types"
+    ],
+    "types": ["node"]
   }
 }
