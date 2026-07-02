@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "apps/web/src/**/*.ts",
+    "apps/web/src/**/*.tsx",
+    "convex/**/*.ts"
+  ],
+  "exclude": ["node_modules", "apps/desktop/dist", "apps/mobile/.expo", "apps/mobile/node_modules"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "#/*": ["./apps/web/src/*"],
+      "@/*": ["./apps/web/src/*"],
+      "@convex/*": ["./convex/*"]
+    },
+    "types": ["vite/client", "node"]
+  }
+}

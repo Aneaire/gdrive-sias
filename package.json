@@ -1,0 +1,34 @@
+{
+  "name": "g-customize",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "apps/desktop"
+  ],
+  "scripts": {
+    "dev": "concurrently -n convex,web -c green,blue \"npm:dev:convex\" \"npm:dev:web\"",
+    "dev:web": "npm --workspace @gcustomize/web run dev",
+    "dev:desktop": "concurrently -n web,desktop -c blue,magenta \"npm:dev:web\" \"npm --workspace @gcustomize/desktop run dev\"",
+    "desktop": "npm --workspace @gcustomize/desktop run dev",
+    "build": "npm run build:web && node scripts/copy-vercel-output.mjs",
+    "build:web": "npm --workspace @gcustomize/web run build",
+    "build:desktop": "npm run build:web && npm --workspace @gcustomize/desktop run dist",
+    "preview": "npm --workspace @gcustomize/web run preview",
+    "test": "npm --workspace @gcustomize/web run test",
+    "dev:convex": "convex dev",
+    "convex:dev": "npm run dev:convex",
+    "convex:codegen": "convex codegen --typecheck disable",
+    "convex:deploy": "convex deploy",
+    "provision": "node scripts/provision.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.0",
+    "convex": "^1.42.0"
+  },
+  "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.93"
+  }
+}

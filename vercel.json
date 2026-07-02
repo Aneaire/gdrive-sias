@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm install"
+}
