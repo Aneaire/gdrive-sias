@@ -150,19 +150,21 @@ async function getActiveMembership(ctx: AuthedCtx) {
 
   const membership =
     userId
-      ? await ctx.db
+      ? (await ctx.db
           .query('tenantMembers')
           .withIndex('by_user', (q) => q.eq('userId', userId))
-          .filter((m) => m.eq('status', 'active'))
-          .first()
+          .collect()).find((m) => m.status === 'active') ?? null
       : null
 
   if (!membership) {
-    const invitedByEmail = await ctx.db
+    // NOTE: JS-side filter instead of `.filter((m) => m.eq('status', 'active'))` —
+    // the Convex query filter `eq` does not match `v.union(v.literal(...))`
+    // values at runtime on Convex 1.42.x (returns 0 rows), while `neq` works.
+    const invitedByEmailRows = await ctx.db
       .query('tenantMembers')
       .withIndex('by_invited_email', (q) => q.eq('invitedEmail', directEmail))
-      .filter((m) => m.eq('status', 'active'))
-      .first()
+      .collect()
+    const invitedByEmail = invitedByEmailRows.find((m) => m.status === 'active') ?? null
 
     if (!invitedByEmail) throw new TenantMembershipRequiredError()
     return { identity, membership: invitedByEmail }

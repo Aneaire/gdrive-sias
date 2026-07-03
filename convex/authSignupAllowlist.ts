@@ -45,23 +45,29 @@ export async function createOrUpdateInvitedUser(
   // This must run even when `existingUserId` is set, because a wiped tenant
   // may have left an orphaned `users` row while a fresh seed created a new
   // `tenantMembers.invited` row for the same email.
-  const invitation = await ctx.db
+  //
+  // NOTE: We collect by index and filter in JS rather than using
+  // `.filter((m) => m.eq('status', 'invited'))`. The Convex query filter
+  // expression `eq` does not match `v.union(v.literal(...))` values at
+  // runtime on Convex 1.42.x (returns 0 rows for a row whose status is the
+  // literal string 'invited'), while `neq` works. JS-side filtering is
+  // correct and avoids the bug.
+  const invitationRows = await ctx.db
     .query('tenantMembers')
     .withIndex('by_invited_email', (q) => q.eq('invitedEmail', email))
-    .filter((m) => m.eq('status', 'invited'))
-    .first()
+    .collect()
+  const invitation = invitationRows.find((m) => m.status === 'invited') ?? null
 
   if (!invitation) {
     // Re-use an existing user only if they already have an ACTIVE membership
     // (so we don't bypass the invitation gate on a stale orphaned row).
     const existingUserId = args.existingUserId
     if (existingUserId) {
-      const activeMembership = await ctx.db
+      const userMemberships = await ctx.db
         .query('tenantMembers')
         .withIndex('by_user', (q) => q.eq('userId', existingUserId))
-        .filter((m) => m.eq('status', 'active'))
-        .first()
-      if (activeMembership) return existingUserId
+        .collect()
+      if (userMemberships.some((m) => m.status === 'active')) return existingUserId
     }
     throw new Error(
       'No invitation found for this email. Ask your admin to invite you, ' +
