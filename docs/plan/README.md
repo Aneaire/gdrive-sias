@@ -11,6 +11,7 @@ Status legend: **not started** · **in progress** · **done**
 | File | Work item | Status |
 |---|---|---|
 | [`subdomain-resolver.md`](./subdomain-resolver.md) | Wire host-based tenant resolution + branding into `apps/web` (Phase C). | not started |
+| [`folders.md`](./folders.md) | Google-Drive-style folder experience: nested folders, breadcrumbs, full CRUD + move, shadcn/ui. `convex/` + `apps/web` only. | not started |
 
 ## Relationship to `SaaS/PHASES.md`
 
