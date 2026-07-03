@@ -4,18 +4,21 @@
   "type": "module",
   "workspaces": [
     "apps/web",
+    "apps/admin",
     "apps/desktop"
   ],
   "overrides": {
     "nf3": "0.3.17"
   },
   "scripts": {
-    "dev": "concurrently -n convex,web -c green,blue \"bun run dev:convex\" \"bun run dev:web\"",
+    "dev": "concurrently -n convex,web,admin -c green,blue,magenta \"bun run dev:convex\" \"bun run dev:web\" \"bun run dev:admin\"",
     "dev:web": "cd apps/web && bun run dev",
+    "dev:admin": "cd apps/admin && bun run dev",
     "dev:desktop": "concurrently -n web,desktop -c blue,magenta \"bun run dev:web\" \"cd apps/desktop && bun run dev\"",
     "desktop": "cd apps/desktop && bun run dev",
-    "build": "bun run build:web && bun scripts/copy-vercel-output.mjs",
+    "build": "bun run build:web && bun run build:admin && bun scripts/copy-vercel-output.mjs",
     "build:web": "cd apps/web && bun run build",
+    "build:admin": "cd apps/admin && bun run build",
     "build:desktop": "bun run build:web && cd apps/desktop && bun run dist",
     "preview": "cd apps/web && bun run preview",
     "test": "cd apps/web && bun run test",
@@ -24,7 +27,8 @@
     "convex:codegen": "convex codegen --typecheck disable",
     "convex:deploy": "convex deploy",
     "provision": "bun scripts/provision.mjs",
-    "seed": "bun scripts/seed.mjs"
+    "seed": "bun scripts/seed.mjs",
+    "bootstrap-superadmin": "bun scripts/bootstrap-superadmin.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

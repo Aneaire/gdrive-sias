@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { Authenticated, AuthLoading, Unauthenticated, useMutation, useQuery } from 'convex/react'
 import { AlertTriangle, KeyRound, Loader2, LogOut, FilePlus2, ShieldCheck, Building2 } from 'lucide-react'
@@ -204,9 +204,16 @@ function Dashboard() {
           <p className="eyebrow">{tenant?.branding.productName ?? 'Survey File System'}</p>
           <h1>Dashboard</h1>
         </div>
-        <button type="button" className="ghost-action" onClick={() => void signOut()}>
-          <LogOut size={16} aria-hidden="true" /> Sign out
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {tenant?.role === 'admin' ? (
+            <Link to="/settings/members" className="ghost-action">
+              Settings
+            </Link>
+          ) : null}
+          <button type="button" className="ghost-action" onClick={() => void signOut()}>
+            <LogOut size={16} aria-hidden="true" /> Sign out
+          </button>
+        </div>
       </header>
 
       <section className="dashboard-grid">

@@ -192,6 +192,8 @@ export const revokeLicense = httpAction(async (ctx, req) => {
 
   let identity
   try {
+    // httpAction ctx has the same `auth` + `db` shape that requireSuperAdmin
+    // needs; the cast bridges the stricter ActionCtx type to AuthedCtx.
     identity = await requireSuperAdmin(ctx as unknown as Parameters<typeof requireSuperAdmin>[0])
   } catch (error) {
     return json(

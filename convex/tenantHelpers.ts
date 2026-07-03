@@ -71,26 +71,61 @@ type AuthedCtx = Pick<QueryCtx, 'auth' | 'db'>
 
 /**
  * Resolves the caller's Auth identity. Throws AuthRequiredError if none.
+ *
+ * Convex Auth's Password provider doesn't include `email` in the JWT claims
+ * by default — the identity only has `tokenIdentifier`, `issuer`, and
+ * `subject` (format: `accountId|userId`). This function augments the
+ * identity with the user's email by looking up the `users` table via the
+ * userId extracted from the subject, so all downstream code can rely on
+ * `identity.email` being populated.
  */
 export async function requireUserIdentity(ctx: AuthedCtx) {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throw new AuthRequiredError()
+
+  if (!identity.email) {
+    const email = await resolveEmailFromSubject(ctx, identity.subject)
+    if (email) return { ...identity, email }
+  }
+
   return identity
 }
 
 /**
+ * Extracts the userId from a Convex Auth subject (`userId|accountId`) and
+ * looks up the user's email in the `users` table. Returns null if the
+ * subject format is unrecognized or the user doesn't have an email.
+ */
+export async function resolveEmailFromSubject(
+  ctx: AuthedCtx,
+  subject: string,
+): Promise<string | null> {
+  const parts = subject.split('|')
+  for (const part of parts) {
+    try {
+      const user = await ctx.db.get(part as Id<'users'>)
+      if (user?.email) return user.email.trim().toLowerCase()
+    } catch {
+      continue
+    }
+  }
+  return null
+}
+
+/**
  * Resolves the caller's Convex Auth identity and verifies the corresponding
- * email is in {@link isSuperAdminEmail}. Used to gate `/license/revoke` and
- * other platform-level back-office forms. Does NOT require the superadmin
- * to be a member of any tenant.
+ * email is a superadmin (per the `superAdmins` table, with a hardcoded
+ * failsafe allowlist in superAdmins.ts). Used to gate every back-office
+ * mutation in the admin panel. Does NOT require the superadmin to be a
+ * member of any tenant.
  */
 export async function requireSuperAdmin(ctx: AuthedCtx) {
   const identity = await requireUserIdentity(ctx)
   const email = identity.email?.trim().toLowerCase()
-  if (!isSuperAdminEmail(email)) {
+  if (!email || !(await isSuperAdminEmail(ctx, email))) {
     throw new Error('Superadmin access required.')
   }
-  return { identity, email: email! }
+  return { identity, email }
 }
 
 export function isAuthRequiredError(error: unknown) {

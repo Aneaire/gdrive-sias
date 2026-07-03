@@ -1,5 +1,6 @@
 import type { Id } from './_generated/dataModel'
 import type { MutationCtx } from './_generated/server'
+import { isSuperAdminEmail } from './superAdmins'
 
 const normalizeEmail = (email: unknown) => String(email ?? '').trim().toLowerCase()
 
@@ -13,6 +14,9 @@ const normalizeEmail = (email: unknown) => String(email ?? '').trim().toLowerCas
  * On first sign-in we set `tenantMembers.status='active'`, `userId`, and
  * `joinedAt`. Without an invitation we throw a helpful "ask your admin"
  * message — no open signup; sales are not self-service.
+ *
+ * The one exception: superadmins (per the `superAdmins` table) can sign up
+ * without an invitation — they are platform operators, not tenant members.
  */
 export async function createOrUpdateInvitedUser(
   ctx: Pick<MutationCtx, 'db'>,
@@ -24,6 +28,18 @@ export async function createOrUpdateInvitedUser(
 ) {
   const email = normalizeEmail(args.profile.email ?? args.profileInput?.email)
   if (!email) throw new Error('Enter a valid email address.')
+
+  // Superadmins bypass the invitation gate — they're platform operators.
+  if (await isSuperAdminEmail(ctx, email)) {
+    const userId: Id<'users'> =
+      args.existingUserId ??
+      (await ctx.db
+        .query('users')
+        .withIndex('email', (q) => q.eq('email', email))
+        .unique())?._id ??
+      (await ctx.db.insert('users', { email }))
+    return userId
+  }
 
   // Look up the pending invitation BEFORE re-using an existing user record.
   // This must run even when `existingUserId` is set, because a wiped tenant

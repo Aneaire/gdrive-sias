@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
 import { mutation } from './_generated/server'
+import { requireSuperAdmin } from './tenantHelpers'
 
 const RESERVED_SUBDOMAINS = new Set([
   'www',
@@ -24,14 +25,19 @@ const SUBDOMAIN_PATTERN = /^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$/
 const DEFAULT_ACCENT = 'oklch(0.56 0.20 254)'
 
 /**
- * Back-office provisioning mutation. Run via `npm run provision` which invokes
- * `npx convex run provisioning:provision <json>`. The CLI executes with admin
- * privileges; this function does not require Convex Auth because only the
- * platform operator can call `npx convex run` against the linked deployment.
+ * Back-office provisioning mutation. Creates a tenant + license + admin
+ * invitation in one transaction.
  *
- * Idempotent on `subdomain`: re-running with the same subdomain is an error to
- * prevent duplicate sales. Pass `--force` in the JSON to retune branding /
- * seats on an existing tenant without re-issuing rows (planned for Phase G).
+ * Access: superadmin-only. The gate is `requireSuperAdmin(ctx)` — the
+ * signed-in Convex Auth identity's email must be in the `superAdmins`
+ * table (or the bootstrap failsafe allowlist). The legacy `bunx convex run
+ * provisioning:provision` CLI path still works because the CLI runs with a
+ * Convex Auth identity — if the operator's email is a superadmin, the gate
+ * passes; otherwise it throws.
+ *
+ * Idempotent on `subdomain`: re-running with the same subdomain is an error
+ * to prevent duplicate sales. Pass `--force` in the JSON to retune branding
+ * / seats on an existing tenant without re-issuing rows (planned for Phase G).
  */
 export const provision = mutation({
   args: {
@@ -50,6 +56,7 @@ export const provision = mutation({
     issuedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireSuperAdmin(ctx)
     validateArgs(args)
 
     // Reject duplicate subdomains.
@@ -115,6 +122,14 @@ export const provision = mutation({
       invitedAt: now,
     })
 
+    await ctx.db.insert('audits', {
+      tenantId,
+      actorUserId: undefined,
+      action: 'superadmin.provision',
+      targetId: licenseKey,
+      createdAt: now,
+    })
+
     return {
       licenseKey,
       tenantId,
@@ -122,6 +137,7 @@ export const provision = mutation({
       adminEmail: normalizedEmail,
       plan: args.plan,
       seats: args.seats,
+      actor: identity.email?.trim().toLowerCase() ?? null,
     }
   },
 })
@@ -164,10 +180,13 @@ function generateLicenseKey(): string {
 }
 
 /**
- * Operator-only test/admin helper: completely removes a tenant including its
+ * Superadmin-only teardown: completely removes a tenant including its
  * licenses, devices, members, files, audit rows, share recipients, sync
- * states. Makes end-to-end re-provisioning simple. Callable only via
- * `npx convex run` (i.e. by the platform operator on their machine).
+ * states. Makes end-to-end re-provisioning simple.
+ *
+ * Access: superadmin-only via `requireSuperAdmin(ctx)`. The CLI path
+ * (`bunx convex run provisioning:wipeTenantBySubdomain`) still works for
+ * the operator whose email is a superadmin.
  *
  * Passes a confirmation string `confirm: "wipe:<subdomain>"` to prevent
  * accidental wipes via copy-paste typos.
@@ -178,6 +197,7 @@ export const wipeTenantBySubdomain = mutation({
     confirm: v.string(),
   },
   handler: async (ctx, args) => {
+    const { identity } = await requireSuperAdmin(ctx)
     const expected = `wipe:${args.subdomain}`
     if (args.confirm !== expected) {
       throw new Error(`Confirmation mismatch. Pass --confirm='${expected}'.`)
@@ -259,6 +279,6 @@ export const wipeTenantBySubdomain = mutation({
     }
 
     await ctx.db.delete(tenantId)
-    return { wiped: true, tenantId }
+    return { wiped: true, tenantId, actor: identity.email?.trim().toLowerCase() ?? null }
   },
 })

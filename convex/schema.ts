@@ -6,6 +6,19 @@ export default defineSchema({
   ...authTables,
 
   // ────────────────────────────────────────────────────────────────────────
+  // Platform operators (superadmins). Seeded via `bunx convex run
+  // superAdmins:bootstrap`. Queried by `isSuperAdminEmail` to gate every
+  // back-office mutation. A hardcoded failsafe allowlist in superAdmins.ts
+  // guarantees the operator can never lock themselves out.
+  // ────────────────────────────────────────────────────────────────────────
+
+  superAdmins: defineTable({
+    email: v.string(),
+    addedAt: v.number(),
+    addedBy: v.string(),
+  }).index('by_email', ['email']),
+
+  // ────────────────────────────────────────────────────────────────────────
   // Licensing + tenancy
   // ────────────────────────────────────────────────────────────────────────
 
@@ -40,10 +53,12 @@ export default defineSchema({
     status: v.union(
       v.literal('invited'),
       v.literal('active'),
+      v.literal('removed'),
     ),
     invitedEmail: v.string(),
     invitedAt: v.number(),
     joinedAt: v.optional(v.number()),
+    removedAt: v.optional(v.number()),
   })
     .index('by_tenant', ['tenantId'])
     .index('by_user', ['userId'])

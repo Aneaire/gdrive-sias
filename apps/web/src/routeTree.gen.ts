@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ValidateRouteImport } from './routes/validate'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsMembersRouteImport } from './routes/settings.members'
 
 const ValidateRoute = ValidateRouteImport.update({
   id: '/validate',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsMembersRoute = SettingsMembersRouteImport.update({
+  id: '/settings/members',
+  path: '/settings/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/validate': typeof ValidateRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/validate': typeof ValidateRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/validate': typeof ValidateRoute
+  '/settings/members': typeof SettingsMembersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/activate' | '/validate'
+  fullPaths: '/' | '/activate' | '/validate' | '/settings/members'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/validate'
-  id: '__root__' | '/' | '/activate' | '/validate'
+  to: '/' | '/activate' | '/validate' | '/settings/members'
+  id: '__root__' | '/' | '/activate' | '/validate' | '/settings/members'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivateRoute: typeof ActivateRoute
   ValidateRoute: typeof ValidateRoute
+  SettingsMembersRoute: typeof SettingsMembersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/members': {
+      id: '/settings/members'
+      path: '/settings/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsMembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
   ValidateRoute: ValidateRoute,
+  SettingsMembersRoute: SettingsMembersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
