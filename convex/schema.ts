@@ -139,6 +139,7 @@ export default defineSchema({
 
   files: defineTable({
     tenantId: v.id('tenants'),
+    folderId: v.optional(v.id('folders')),
     categoryId: v.number(),
     categoryName: v.string(),
     municipality: v.string(),
@@ -173,10 +174,25 @@ export default defineSchema({
       ['tenantId', 'categoryId', 'municipality', 'barangay', 'deletedAt', 'uploadedAt'])
     .index('by_tenant_uploaded_at', ['tenantId', 'uploadedAt'])
     .index('by_tenant_deleted_uploaded', ['tenantId', 'deletedAt', 'uploadedAt'])
+    .index('by_tenant_folder_deleted_uploaded', ['tenantId', 'folderId', 'deletedAt', 'uploadedAt'])
     .index('by_tenant_updated_at', ['tenantId', 'updatedAt'])
     .index('by_tenant_client_upload_id', ['tenantId', 'clientUploadId'])
     .index('by_tenant_drive_file_id', ['tenantId', 'driveFileId'])
     .index('by_tenant_category', ['tenantId', 'categoryId']),
+
+  folders: defineTable({
+    tenantId: v.id('tenants'),
+    parentId: v.optional(v.id('folders')),
+    name: v.string(),
+    createdAt: v.number(),
+    createdByUserId: v.optional(v.id('users')),
+    updatedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+    driveFolderId: v.optional(v.string()),
+  })
+    .index('by_tenant_parent_deleted_name', ['tenantId', 'parentId', 'deletedAt', 'name'])
+    .index('by_tenant_deleted', ['tenantId', 'deletedAt'])
+    .index('by_tenant_drive_folder_id', ['tenantId', 'driveFolderId']),
 
   shareRecipients: defineTable({
     tenantId: v.id('tenants'),

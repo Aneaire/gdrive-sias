@@ -9,6 +9,7 @@ const normalize = (value: string) => value.trim().toLowerCase()
 const MAX_SEARCH_RESULTS = 500
 
 const fileValidator = v.object({
+  folderId: v.optional(v.id('folders')),
   categoryId: v.number(),
   categoryName: v.string(),
   municipality: v.string(),
