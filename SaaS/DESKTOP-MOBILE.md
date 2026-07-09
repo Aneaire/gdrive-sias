@@ -15,7 +15,7 @@ One public desktop installer. One public mobile app. Both generic until the buye
 
 ```
 1. App boots; preload reads {licenseKey, deviceId, tenantId, convexUrl, branding}
-   from Electron's userData/rielan.config.json.
+   from Electron's userData/gcustomize/license-config.json.
 2. If licenseKey is missing → render the /activate route:
    - Input field for license key (with hyphens for readability)
    - "Activate" button → POST /license/activate {licenseKey, deviceId, platform:'desktop', deviceLabel:pcHostname}
@@ -109,7 +109,7 @@ Same as desktop. React Native screens:
 ### App store reality
 
 - Apple App Store and Google Play do not allow per-customer listings (one app, one developer account).
-- The published listing uses your generic product name ("RIELAN Survey File System") and a neutral icon.
+- The published listing uses your generic product name and a neutral icon.
 - On first run, the tenant's branding takes over the in-app home screen (logo at the top of the screen, colored accent) — the app *store* listing stays generic.
 - Updates: ship one update via the normal store process; the activated devices pick up the new version. No customer-by-customer rollouts.
 

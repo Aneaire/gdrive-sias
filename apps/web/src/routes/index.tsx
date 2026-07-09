@@ -73,14 +73,14 @@ function AuthGate() {
   }
 
   return (
-    <main className="auth-shell" aria-label="Sign in to Survey File System">
+    <main className="auth-shell" aria-label="Sign in to g-customize">
       <section className="auth-card">
         <div className="auth-card-header">
           <div className="auth-mark" aria-hidden="true">
             <KeyRound size={22} />
           </div>
           <div>
-            <p className="eyebrow">Survey File System</p>
+            <p className="eyebrow">g-customize</p>
             <h1>{flow === 'signIn' ? 'Sign in' : 'Create your account'}</h1>
           </div>
         </div>

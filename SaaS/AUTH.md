@@ -22,7 +22,7 @@ if (!/^\S+@\S+\.\S+$/.test(email)) {
 return { email }
 ```
 
-Rationale: buyers may use company email addresses (`admin@acme.example`), not Gmail. The product is sold outside the original RIELAN office.
+Rationale: buyers may use company email addresses (`admin@acme.example`), not Gmail. The product is a general-purpose tenant platform.
 
 ## Restriction 2: Allowlist-gated signup
 

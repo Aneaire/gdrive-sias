@@ -57,7 +57,7 @@ These four env vars are the **only** Google secrets on the backend. The legacy f
           to remove the app from https://myaccount.google.com/permissions and try again.)
        d. Get the Drive user's email: GET userinfo endpoint, OR use the id_token payload
        e. Create the tenant's root Drive folder
-          - name = tenants.branding.productName + " — Files" (or default "RIELAN Survey File System")
+          - name = tenants.branding.productName + " — Files" (or default "g-customize — Files")
           - mimeType = application/vnd.google-apps.folder
           - First list folders with that name (root level) to avoid duplicates
        f. Encrypt refresh_token with AES-256-GCM + ENCRYPTION_KEY

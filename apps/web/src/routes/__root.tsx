@@ -11,12 +11,12 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       {
-        title: 'G-customize — Survey File System',
+        title: 'g-customize',
       },
       {
         name: 'description',
         content:
-          'A private, white-labeled survey document manager. Phase A scaffold; brand arrives in Phase C.',
+          'A private, white-labeled document manager. Phase A scaffold; brand arrives in Phase C.',
       },
     ],
     links: [{ rel: 'stylesheet', href: appCss }],

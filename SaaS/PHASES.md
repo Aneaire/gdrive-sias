@@ -36,7 +36,7 @@ Recommended order. Each phase has a clear end-state you can verify before moving
 3. Write `scripts/provision.mjs` per `LICENSING.md` — creates tenants + licenses + tenantMembers.invited row, prints the buyer-facing summary.
 4. Add the desktop license first-run flow:
    - New TanStack route `/activate` (in `apps/web/src/routes/`) that the desktop shell navigates to on first launch.
-   - Activation form → `POST /license/activate` → persists `{licenseKey, deviceId, tenantId, branding}` to `userData/rielan.config.json` via a preload IPC.
+   - Activation form → `POST /license/activate` → persists `{licenseKey, deviceId, tenantId, branding}` to `userData/gcustomize/license-config.json` via a preload IPC.
    - On every desktop launch: `POST /license/validate`; if revoked → render contact-support screen.
 5. Wire `requireLicenseActive(ctx, deviceId)` into a few key mutations (`files.createDriveUploadRecord`, `files.createMany`) as defense-in-depth.
 6. Apply branding at desktop startup: window title, accent CSS variable injected before renderer load.

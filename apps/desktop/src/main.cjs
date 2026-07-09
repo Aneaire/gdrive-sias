@@ -39,7 +39,7 @@ async function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'Survey File System',
+    title: 'g-customize',
     icon: DESKTOP_ICON_PATH,
     backgroundColor: '#f4f0e6',
     autoHideMenuBar: true,
@@ -83,7 +83,7 @@ async function loadApplication(window) {
 }
 
 async function resolveApplicationUrl() {
-  if (process.env.RIELAN_WEB_URL) return process.env.RIELAN_WEB_URL
+  if (process.env.GCUSTOMIZE_WEB_URL) return process.env.GCUSTOMIZE_WEB_URL
   if (!app.isPackaged) return DEV_WEB_URL
   const LocalWebServer = require('./local-web-server.cjs')
   if (!localWebServerStarted) {

@@ -28,11 +28,11 @@ Every decision below was confirmed during planning. Do not deviate without re-op
 - All other design tokens and the field-office command-center layout stay unchanged (per `DESIGN.md`).
 - Rationale: keeps maintenance sane; one product, lightly themed.
 
-## 5. Existing RIELAN operator: Untouched branch + fresh Convex
+## 5. Existing single-operator deployment: Untouched branch + fresh Convex
 
 - The current live single-operator deployment is left alone.
 - The packaged product is a **new branch + a fresh empty Convex deployment**.
-- No backfill. No cut-over for RIELAN. If they ever want to move to the packaged product, write a copy script then. Deferred indefinitely.
+- No backfill. No cut-over for legacy. If migration is ever needed, write a copy script then. Deferred indefinitely.
 - See `MIGRATION.md`.
 
 ## 6. Subdomain provisioning: Manual one-line script

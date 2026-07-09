@@ -18,7 +18,7 @@ function FilesLayout() {
               <FolderOpen size={26} aria-hidden="true" />
             </div>
             <div>
-              <p className="eyebrow">Survey File System</p>
+              <p className="eyebrow">g-customize</p>
               <h1>Preparing your files</h1>
               <p>Checking your session and loading your workspace…</p>
             </div>
@@ -52,7 +52,7 @@ function Shell() {
       </button>
       {sidebarOpen ? <button type="button" className="sidebar-scrim" aria-label="Close navigation menu" onClick={() => setSidebarOpen(false)} /> : null}
       <aside className="drive-sidebar">
-        <div className="drive-brand"><FolderOpen size={22} /><div><p className="eyebrow">{tenant?.branding.productName ?? 'Survey File System'}</p><strong>{tenant?.name ?? 'My Files'}</strong></div></div>
+        <div className="drive-brand"><FolderOpen size={22} /><div><p className="eyebrow">{tenant?.branding.productName ?? 'g-customize'}</p><strong>{tenant?.name ?? 'My Files'}</strong></div></div>
         <nav className="drive-nav">
           <Link to="/files" search={{ trash: false }} onClick={() => setSidebarOpen(false)}><FolderOpen size={16} /> My Files</Link>
           <Link to="/files" search={{ trash: true }} onClick={() => setSidebarOpen(false)}><Trash2 size={16} /> Trash</Link>

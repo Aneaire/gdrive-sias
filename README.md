@@ -1,6 +1,6 @@
 # g-customize
 
-The packaged, saleable version of the RIELAN Survey File System.
+A multi-tenant SaaS platform for Google Drive-based document management.
 
 A buyer pays once and "owns" a desktop app and a web app at their own subdomain. One shared Convex deployment + one shared web build; tenants are isolated by `tenantId`. Per-customer branding (name, logo, accent color) is driven by per-tenant rows. License keys are perpetual and revocable, validated server-side on every app launch.
 
@@ -95,4 +95,4 @@ See [`.env.example`](./.env.example) for the four server-side secrets Convex wil
 
 ## Legacy note
 
-The original single-operator RIELAN Survey File System lives at `../ryan/Survey-plan` on this machine and stays untouched. The packaged product is a fresh branch + fresh Convex per `SaaS/MIGRATION.md`. No data migrates.
+The original single-operator deployment lives at `../ryan/Survey-plan` on this machine and stays untouched. The packaged product is a fresh branch + fresh Convex per `SaaS/MIGRATION.md`. No data migrates.
