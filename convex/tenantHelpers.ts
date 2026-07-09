@@ -54,6 +54,18 @@ export class DriveNotConnectedError extends Error {
   }
 }
 
+/**
+ * Thrown when the tenant's Google Drive access token has expired and the
+ * refresh token is no longer valid (Google revoked the grant). The admin
+ * must reconnect Drive in Settings → Integrations.
+ */
+export class DriveReconnectNeededError extends Error {
+  constructor() {
+    super('Google Drive access expired. Reconnect in Settings → Integrations.')
+    this.name = 'DriveReconnectNeededError'
+  }
+}
+
 export type TenantMembership = {
   identity: NonNullable<Awaited<ReturnType<QueryCtx['auth']['getUserIdentity']>>>
   tenantId: Id<'tenants'>

@@ -1,8 +1,13 @@
 import { v } from 'convex/values'
 
 import type { Id } from './_generated/dataModel'
-import { query } from './_generated/server'
-import { requireTenantAdmin, requireTenantMember } from './tenantHelpers'
+import { internalQuery, query } from './_generated/server'
+import {
+  AuthRequiredError,
+  requireTenantAdmin,
+  requireTenantMember,
+  TenantMembershipRequiredError,
+} from './tenantHelpers'
 
 /**
  * Public (unauthenticated) lookup used by the web app's subdomain resolver.
@@ -41,18 +46,23 @@ export const getBySubdomain = query({
 export const current = query({
   args: {},
   handler: async (ctx) => {
-    const member = await requireTenantMember(ctx)
-    const tenant = await ctx.db.get(member.tenantId)
-    if (!tenant) return null
+    try {
+      const member = await requireTenantMember(ctx)
+      const tenant = await ctx.db.get(member.tenantId)
+      if (!tenant) return null
 
-    return {
-      tenantId: tenant._id,
-      slug: tenant.slug,
-      subdomain: tenant.subdomain,
-      plan: tenant.plan,
-      name: tenant.name,
-      role: member.role,
-      branding: tenant.branding,
+      return {
+        tenantId: tenant._id,
+        slug: tenant.slug,
+        subdomain: tenant.subdomain,
+        plan: tenant.plan,
+        name: tenant.name,
+        role: member.role,
+        branding: tenant.branding,
+      }
+    } catch (e) {
+      if (e instanceof TenantMembershipRequiredError || e instanceof AuthRequiredError) return null
+      throw e
     }
   },
 })
@@ -96,5 +106,18 @@ export const brandingForAdmin = query({
     const admin = await requireTenantAdmin(ctx)
     const tenant = await ctx.db.get(admin.tenantId)
     return tenant?.branding ?? null
+  },
+})
+
+/**
+ * Internal: returns the current admin user's tenant info for OAuth state signing.
+ */
+export const getMyTenantInfo = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const admin = await requireTenantAdmin(ctx)
+    const tenant = await ctx.db.get(admin.tenantId)
+    if (!tenant) return null
+    return { tenantId: admin.tenantId, subdomain: tenant.subdomain }
   },
 })

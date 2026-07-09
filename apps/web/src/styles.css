@@ -874,6 +874,39 @@ body {
   100% { transform: translateX(250%); }
 }
 
+.drive-no-membership-card {
+  width: min(92vw, 28rem);
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(255 253 248 / 0.92);
+  box-shadow: 0 24px 70px rgb(31 58 138 / 0.12);
+  display: grid;
+  gap: 1rem;
+}
+
+.drive-no-membership-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 12px 24px rgb(31 58 138 / 0.24);
+}
+
+.drive-no-membership-card h2 {
+  margin: 0.25rem 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.drive-no-membership-card p {
+  margin: 0;
+  color: #6b6b6b;
+  line-height: 1.45;
+}
+
 .drive-tile.clickable {
   cursor: pointer;
   outline: none;
@@ -937,4 +970,258 @@ body {
 
 @keyframes skeleton-shimmer {
   100% { transform: translateX(100%); }
+}
+
+/* Integrations settings */
+.integrations-shell {
+  max-width: 68rem;
+  position: relative;
+}
+
+.integrations-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 82% 12%, rgb(78 135 96 / 0.16), transparent 22rem),
+    radial-gradient(circle at 16% 18%, rgb(31 58 138 / 0.10), transparent 18rem),
+    linear-gradient(180deg, rgb(255 255 255 / 0.26), transparent 18rem);
+}
+
+.integrations-header {
+  align-items: flex-start;
+  padding-top: 0.25rem;
+}
+
+.integrations-header h1 {
+  font-size: clamp(2rem, 5vw, 3.35rem);
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.integrations-lede {
+  max-width: 37rem;
+  margin: 0.75rem 0 0;
+  color: #625d51;
+  line-height: 1.55;
+}
+
+.integration-back {
+  background: rgb(255 250 240 / 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgb(42 36 24 / 0.06);
+}
+
+.integration-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.8rem 0.95rem;
+  border-radius: 0.75rem;
+  font-weight: 650;
+  box-shadow: 0 12px 28px rgb(25 42 31 / 0.07);
+}
+
+.integration-alert.success {
+  color: #0f633c;
+  background: linear-gradient(135deg, #ddf8e7, #cbf0db);
+  border: 1px solid #8bd4a9;
+}
+
+.integration-alert.error {
+  color: #8b1c1c;
+  background: #fbe7e7;
+  border: 1px solid #e7b6b6;
+}
+
+.integration-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 0.96), rgb(255 252 246 / 0.9)),
+    repeating-linear-gradient(90deg, transparent 0 18px, rgb(31 58 138 / 0.025) 18px 19px);
+  border: 1px solid rgb(214 207 190 / 0.95);
+  border-radius: 1.35rem;
+  padding: clamp(1.1rem, 3vw, 1.65rem);
+  box-shadow: 0 22px 60px rgb(48 41 28 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.integration-card-glow {
+  position: absolute;
+  top: -8rem;
+  right: -5rem;
+  width: 19rem;
+  height: 19rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgb(52 168 83 / 0.18), transparent 68%);
+  filter: blur(2px);
+}
+
+.integration-card-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.integration-card-header h2 {
+  margin: 0.1rem 0 0;
+  font-size: 1.4rem;
+  letter-spacing: -0.035em;
+}
+
+.integration-icon-stack {
+  width: 3.35rem;
+  height: 3.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  color: #0f633c;
+  background:
+    linear-gradient(135deg, rgb(227 247 235), rgb(255 255 255)),
+    #fff;
+  border: 1px solid #c9e8d4;
+  box-shadow: 0 14px 28px rgb(24 92 54 / 0.12);
+}
+
+.integration-connected-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 0.65fr);
+  gap: 1rem;
+}
+
+.integration-status-panel {
+  min-height: 15rem;
+  padding: clamp(1rem, 3vw, 1.35rem);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #f8fff9, #fffaf0 64%);
+  border: 1px solid #d9eadc;
+}
+
+.integration-status-pill {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.58rem;
+  border-radius: 999px;
+  color: #0f633c;
+  background: #dff7e7;
+  border: 1px solid #9bd9b1;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.integration-status-panel h3,
+.integration-disconnected h3 {
+  margin: 1rem 0 0.45rem;
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.integration-status-panel p,
+.integration-disconnected p {
+  max-width: 38rem;
+  margin: 0;
+  color: #625d51;
+  line-height: 1.55;
+}
+
+.integration-account {
+  margin: 1.25rem 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.integration-account dt {
+  color: #817a6d;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.085em;
+  font-weight: 750;
+}
+
+.integration-account dd {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.72rem;
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 0.74);
+  border: 1px solid #e2dccf;
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+.integration-danger:hover {
+  color: #8b1c1c;
+  border-color: #e7b6b6;
+  background: #fff4f4;
+}
+
+.integration-benefits {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.integration-benefits div {
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border-radius: 0.95rem;
+  color: #24462f;
+  background: rgb(255 255 255 / 0.68);
+  border: 1px solid #e4ddcd;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  font-weight: 700;
+}
+
+.integration-benefits svg { color: #16834d; }
+
+.integration-disconnected {
+  position: relative;
+  min-height: 14rem;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: clamp(1rem, 4vw, 2rem);
+  border-radius: 1rem;
+  border: 1px dashed #b8ad98;
+  background: rgb(255 250 240 / 0.64);
+}
+
+.integration-disconnected .primary-action {
+  margin-top: 1.25rem;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 14px 28px rgb(31 58 138 / 0.16);
+}
+
+.integration-empty-card,
+.integration-card.connecting {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.72);
+}
+
+@media (max-width: 760px) {
+  .integrations-header {
+    flex-direction: column;
+  }
+
+  .integration-connected-grid {
+    grid-template-columns: 1fr;
+  }
 }

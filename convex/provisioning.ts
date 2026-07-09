@@ -114,12 +114,19 @@ export const provision = mutation({
         `Email "${normalizedEmail}" already has a pending or active invitation to another tenant.`,
       )
     }
+    const existingUser = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', normalizedEmail))
+      .unique()
+    const isActive = Boolean(existingUser)
     await ctx.db.insert('tenantMembers', {
       tenantId,
       role: 'admin',
-      status: 'invited',
+      status: isActive ? 'active' : 'invited',
+      userId: existingUser?._id,
       invitedEmail: normalizedEmail,
       invitedAt: now,
+      ...(isActive ? { joinedAt: now } : {}),
     })
 
     await ctx.db.insert('audits', {

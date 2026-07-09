@@ -15,6 +15,7 @@ import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FilesIndexRouteImport } from './routes/files.index'
 import { Route as SettingsMembersRouteImport } from './routes/settings.members'
+import { Route as SettingsIntegrationsRouteImport } from './routes/settings.integrations'
 import { Route as FilesFolderIdRouteImport } from './routes/files.$folderId'
 
 const ValidateRoute = ValidateRouteImport.update({
@@ -47,6 +48,11 @@ const SettingsMembersRoute = SettingsMembersRouteImport.update({
   path: '/settings/members',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
+  id: '/settings/integrations',
+  path: '/settings/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FilesFolderIdRoute = FilesFolderIdRouteImport.update({
   id: '/$folderId',
   path: '/$folderId',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/files': typeof FilesRouteWithChildren
   '/validate': typeof ValidateRoute
   '/files/$folderId': typeof FilesFolderIdRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/members': typeof SettingsMembersRoute
   '/files/': typeof FilesIndexRoute
 }
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/activate': typeof ActivateRoute
   '/validate': typeof ValidateRoute
   '/files/$folderId': typeof FilesFolderIdRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/members': typeof SettingsMembersRoute
   '/files': typeof FilesIndexRoute
 }
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/files': typeof FilesRouteWithChildren
   '/validate': typeof ValidateRoute
   '/files/$folderId': typeof FilesFolderIdRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/settings/members': typeof SettingsMembersRoute
   '/files/': typeof FilesIndexRoute
 }
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/validate'
     | '/files/$folderId'
+    | '/settings/integrations'
     | '/settings/members'
     | '/files/'
   fileRoutesByTo: FileRoutesByTo
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/activate'
     | '/validate'
     | '/files/$folderId'
+    | '/settings/integrations'
     | '/settings/members'
     | '/files'
   id:
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/validate'
     | '/files/$folderId'
+    | '/settings/integrations'
     | '/settings/members'
     | '/files/'
   fileRoutesById: FileRoutesById
@@ -114,6 +126,7 @@ export interface RootRouteChildren {
   ActivateRoute: typeof ActivateRoute
   FilesRoute: typeof FilesRouteWithChildren
   ValidateRoute: typeof ValidateRoute
+  SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   SettingsMembersRoute: typeof SettingsMembersRoute
 }
 
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsMembersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/integrations': {
+      id: '/settings/integrations'
+      path: '/settings/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof SettingsIntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/files/$folderId': {
       id: '/files/$folderId'
       path: '/$folderId'
@@ -188,6 +208,7 @@ const rootRouteChildren: RootRouteChildren = {
   ActivateRoute: ActivateRoute,
   FilesRoute: FilesRouteWithChildren,
   ValidateRoute: ValidateRoute,
+  SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   SettingsMembersRoute: SettingsMembersRoute,
 }
 export const routeTree = rootRouteImport

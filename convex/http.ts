@@ -3,6 +3,8 @@ import { httpRouter } from 'convex/server'
 import { auth } from './auth'
 import { httpAction } from './_generated/server'
 import { activateLicense, revokeLicense, validateLicense } from './licenseHttp'
+import { handleDriveOauthCallback } from './driveOauth'
+import { handleDriveUpload, handleDriveDownload } from './googleDrive'
 
 const http = httpRouter()
 
@@ -35,9 +37,14 @@ http.route({ path: '/license/validate', method: 'POST', handler: validateLicense
 http.route({ path: '/license/revoke', method: 'OPTIONS', handler: preflight })
 http.route({ path: '/license/revoke', method: 'POST', handler: revokeLicense })
 
-// Public OAuth callback + tenant-scoped Drive routes are wired in Phase D.
-// http.route({ path: '/drive-oauth/callback', method: 'POST', handler: ... })
-// http.route({ path: '/drive-upload',         method: 'POST', handler: ... })
-// http.route({ path: '/drive-download',        method: 'GET',  handler: ... })
+// Phase D: OAuth callback + tenant-scoped Drive routes
+http.route({ path: '/drive-oauth/callback', method: 'OPTIONS', handler: preflight })
+http.route({ path: '/drive-oauth/callback', method: 'POST', handler: handleDriveOauthCallback })
+
+http.route({ path: '/drive-upload',  method: 'OPTIONS', handler: preflight })
+http.route({ path: '/drive-upload',  method: 'POST',    handler: handleDriveUpload })
+
+http.route({ path: '/drive-download', method: 'OPTIONS', handler: preflight })
+http.route({ path: '/drive-download', method: 'GET',     handler: handleDriveDownload })
 
 export default http
