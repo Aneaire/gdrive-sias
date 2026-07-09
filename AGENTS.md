@@ -20,7 +20,7 @@ truth for **intended design**.
 - `web/` — TanStack Start + Vite + React 19 (Vercel deploy target; shared by all subdomains)
 - `admin/` — superadmin / platform-operator console
 - `desktop/` — Electron shell with offline renderer + license-key first run
-- `mobile/` — Expo + React Native (Phase F; not active yet)
+- Mobile — removed for now (Phase F remains a future rebuild if needed; no active `apps/mobile`)
 
 ## New feature workflow — platform scope
 
@@ -31,16 +31,16 @@ When a user asks for a **new feature** without naming a target platform, default
    touch `desktop`/`mobile`.
 2. **Finish** — implement, typecheck, lint, verify end to end. Don't leave it half-done.
 3. **Stop and ask** before porting anywhere else.
-4. Only after the user confirms, port to `desktop`/`mobile` as requested.
+4. Only after the user confirms, port to `desktop` as requested. Mobile has no active app package right now.
 
 **Exceptions** (go cross-platform immediately): the user named a specific platform →
-do only that; "all platforms" → land web/admin first and verify, then port; shared
-non-platform code (`convex/`, `SaaS/`, `scripts/`, root configs) → change it there
-(applies everywhere); bugfix in existing desktop/mobile code → fix in place.
+do only that; "all platforms" → land web/admin first and verify, then port to active
+platforms; shared non-platform code (`convex/`, `SaaS/`, `scripts/`, root configs) →
+change it there (applies everywhere); bugfix in existing desktop code → fix in place.
 
 Rationale: `desktop` wraps the web renderer but has its own license-first-run + SQLite
-sync wiring; `mobile` is scaffolded but inactive. Eager porting produces broken
-partial work across three surfaces.
+sync wiring. Mobile is intentionally removed for now. Eager porting produces broken
+partial work across inactive surfaces.
 
 ## Conventions
 

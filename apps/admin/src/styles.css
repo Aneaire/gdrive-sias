@@ -624,3 +624,97 @@ body {
   gap: 1rem;
   align-items: center;
 }
+
+.clickable-table tbody tr {
+  cursor: pointer;
+}
+
+.clickable-table tbody tr:focus-visible td {
+  outline: 2px solid var(--blueprint);
+  outline-offset: -2px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+.modal-panel {
+  width: min(72rem, 100%);
+  max-height: min(82vh, 54rem);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  box-shadow: 0 1.5rem 4rem rgba(15, 23, 42, 0.24);
+  padding: 1.25rem;
+}
+
+.modal-header,
+.section-heading-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.modal-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line-2);
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--blueprint-ink);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: var(--paper-2);
+  color: var(--blueprint-ink);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.detail-tile {
+  padding: 0.8rem;
+  border: 1px solid var(--line-2);
+  border-radius: 0.55rem;
+  background: var(--paper-2);
+}
+
+.detail-tile span {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-tile strong {
+  color: var(--blueprint-ink);
+}

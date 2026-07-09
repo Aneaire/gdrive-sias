@@ -104,7 +104,7 @@ async function resolveInitialRoute(baseUrl) {
   if (!config) return `${baseUrl}/activate`
   // Existing config: route through the /validate screen, which calls
   // /license/validate through the renderer (it knows the Convex site URL) and
-  // then redirects to / once the license is confirmed active.
+  // then redirects to /files once the license is confirmed active.
   return `${baseUrl}/validate`
 }
 

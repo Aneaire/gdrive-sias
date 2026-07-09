@@ -12,7 +12,7 @@ rest of `SaaS/`. Where reality diverges from the plan, this file wins for behavi
   dev: `http://localhost:3001`. Gates everything via `requireSuperAdmin`.
 - **`desktop/`** — Electron shell bundling the offline renderer. License-key first
   run + offline SQLite sync. Run via `bun run dev:desktop`.
-- **`mobile/`** — Expo + React Native. Phase F; scaffolded, not in active workspaces.
+- **Mobile** — removed for now. Phase F remains a future rebuild if needed; there is no active `apps/mobile` package.
 
 ## Backend (`convex/`)
 
@@ -112,8 +112,8 @@ tenant membership. The failsafe guarantees you can never lock yourself out.
   sale = a Convex `tenants` row + wildcard DNS already covers it — **no redeploy, no
   per-tenant hosting.** Not yet live (see subdomain section above).
 - **Backend:** one Convex deployment, all tenants share it, isolated by `tenantId`.
-- **Desktop/mobile:** one public installer/app each; license key binds the device to
-  a tenant at first run.
+- **Desktop:** one public installer; license key binds the device to a tenant at first run.
+  Mobile is not currently shipped.
 
 ## Local dev
 
@@ -128,9 +128,9 @@ tenant membership. The failsafe guarantees you can never lock yourself out.
 
 - **Wired:** tenant schema + isolation helpers, invitation-based auth, superadmin
   console (dashboard/tenants/licenses/audits/superadmins/provision), web sign-in +
-  dashboard + metadata-only file create, desktop license activate/validate HTTP
-  routes, tenant-admin member management.
+  folder browser, desktop license activate/validate HTTP routes, tenant-admin member
+  management.
 - **Stubbed / not wired:** subdomain host-based resolver + branding injection
   (Phase C), "Connect Google Drive" per-tenant OAuth (Phase D), Google OAuth sign-in
-  provider (Phase E), Expo mobile (Phase F). See [`../SaaS/PHASES.md`](../SaaS/PHASES.md)
+  provider (Phase E), mobile rebuild (Phase F). See [`../SaaS/PHASES.md`](../SaaS/PHASES.md)
   for the full phase plan.

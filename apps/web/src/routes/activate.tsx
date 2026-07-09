@@ -45,7 +45,7 @@ export function ActivateScreen() {
       <div className="activate-shell">
         <KeyRound size={28} aria-hidden="true" />
         <h1>Activate a license</h1>
-        <p>This page is for desktop and mobile apps. To sign in on the web, visit your subdomain at <code>{typeof window !== 'undefined' ? window.location.host : ''}</code>.</p>
+        <p>This page is for the desktop app. To sign in on the web, visit your subdomain at <code>{typeof window !== 'undefined' ? window.location.host : ''}</code>.</p>
       </div>
     )
   }
@@ -149,8 +149,8 @@ export function ActivateScreen() {
         </button>
 
         {state.kind === 'success' ? (
-          <button type="button" className="primary-action ghost" onClick={() => window.location.assign('/')}>
-            Continue to sign-in
+          <button type="button" className="primary-action ghost" onClick={() => window.location.assign('/validate')}>
+            Continue to files
           </button>
         ) : null}
       </form>

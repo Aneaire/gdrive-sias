@@ -15,7 +15,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTenantsRouteImport } from './routes/_authenticated/tenants'
 import { Route as AuthenticatedSuperadminsRouteImport } from './routes/_authenticated/superadmins'
 import { Route as AuthenticatedProvisionRouteImport } from './routes/_authenticated/provision'
-import { Route as AuthenticatedLicensesRouteImport } from './routes/_authenticated/licenses'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditsRouteImport } from './routes/_authenticated/audits'
 import { Route as AuthenticatedTenantsIdRouteImport } from './routes/_authenticated/tenants.$id'
@@ -50,11 +49,6 @@ const AuthenticatedProvisionRoute = AuthenticatedProvisionRouteImport.update({
   path: '/provision',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedLicensesRoute = AuthenticatedLicensesRouteImport.update({
-  id: '/licenses',
-  path: '/licenses',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -76,7 +70,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/audits': typeof AuthenticatedAuditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/licenses': typeof AuthenticatedLicensesRoute
   '/provision': typeof AuthenticatedProvisionRoute
   '/superadmins': typeof AuthenticatedSuperadminsRoute
   '/tenants': typeof AuthenticatedTenantsRouteWithChildren
@@ -87,7 +80,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/audits': typeof AuthenticatedAuditsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/licenses': typeof AuthenticatedLicensesRoute
   '/provision': typeof AuthenticatedProvisionRoute
   '/superadmins': typeof AuthenticatedSuperadminsRoute
   '/tenants': typeof AuthenticatedTenantsRouteWithChildren
@@ -100,7 +92,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/audits': typeof AuthenticatedAuditsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/licenses': typeof AuthenticatedLicensesRoute
   '/_authenticated/provision': typeof AuthenticatedProvisionRoute
   '/_authenticated/superadmins': typeof AuthenticatedSuperadminsRoute
   '/_authenticated/tenants': typeof AuthenticatedTenantsRouteWithChildren
@@ -113,7 +104,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/audits'
     | '/dashboard'
-    | '/licenses'
     | '/provision'
     | '/superadmins'
     | '/tenants'
@@ -124,7 +114,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/audits'
     | '/dashboard'
-    | '/licenses'
     | '/provision'
     | '/superadmins'
     | '/tenants'
@@ -136,7 +125,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/audits'
     | '/_authenticated/dashboard'
-    | '/_authenticated/licenses'
     | '/_authenticated/provision'
     | '/_authenticated/superadmins'
     | '/_authenticated/tenants'
@@ -193,13 +181,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProvisionRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/licenses': {
-      id: '/_authenticated/licenses'
-      path: '/licenses'
-      fullPath: '/licenses'
-      preLoaderRoute: typeof AuthenticatedLicensesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -238,7 +219,6 @@ const AuthenticatedTenantsRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAuditsRoute: typeof AuthenticatedAuditsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedLicensesRoute: typeof AuthenticatedLicensesRoute
   AuthenticatedProvisionRoute: typeof AuthenticatedProvisionRoute
   AuthenticatedSuperadminsRoute: typeof AuthenticatedSuperadminsRoute
   AuthenticatedTenantsRoute: typeof AuthenticatedTenantsRouteWithChildren
@@ -247,7 +227,6 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAuditsRoute: AuthenticatedAuditsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedLicensesRoute: AuthenticatedLicensesRoute,
   AuthenticatedProvisionRoute: AuthenticatedProvisionRoute,
   AuthenticatedSuperadminsRoute: AuthenticatedSuperadminsRoute,
   AuthenticatedTenantsRoute: AuthenticatedTenantsRouteWithChildren,

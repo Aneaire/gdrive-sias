@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from '@tanstack/react-router'
 import { AuthLoading, Unauthenticated, useQuery } from 'convex/react'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { AlertTriangle, LayoutDashboard, Building2, KeyRound, ScrollText, ShieldCheck, LogOut, Loader2, Plus } from 'lucide-react'
+import { AlertTriangle, LayoutDashboard, Building2, ScrollText, ShieldCheck, LogOut, Loader2, Plus } from 'lucide-react'
 import { api } from '@convex/_generated/api'
 
 export const Route = createFileRoute('/_authenticated')({
@@ -62,7 +62,6 @@ function AdminShell({ email }: { email: string }) {
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/tenants', label: 'Tenants', icon: Building2 },
-    { to: '/licenses', label: 'Licenses', icon: KeyRound },
     { to: '/audits', label: 'Audit log', icon: ScrollText },
     { to: '/superadmins', label: 'Superadmins', icon: ShieldCheck },
   ]

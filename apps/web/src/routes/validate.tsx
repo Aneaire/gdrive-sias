@@ -15,7 +15,7 @@ const DESKTOP_API: DesktopApi | null =
  * Periodic / on-launch validation screen. Desktop shell navigates here after
  * the renderer loads so we can call /license/validate through the renderer
  * (which knows the Convex site URL) and dispatch the right outcome:
- *   - revoked:false → navigate to / (sign-in)
+ *   - revoked:false → navigate to /files (sign-in or file browser)
  *   - revoked:true  → show the contact-support screen
  */
 export function ValidateScreen() {
@@ -29,8 +29,8 @@ export function ValidateScreen() {
   async function runValidation() {
     try {
       if (!DESKTOP_API) {
-        // Not the desktop app — go to the branded sign-in / home route.
-        navigate({ to: '/' })
+        // Not the desktop app — go to the branded file/sign-in route.
+        navigate({ to: '/files', search: { trash: false } })
         return
       }
 
@@ -70,7 +70,7 @@ export function ValidateScreen() {
         await DESKTOP_API.applyBranding(result.branding)
       }
 
-      navigate({ to: '/' })
+      navigate({ to: '/files', search: { trash: false } })
     } catch (error) {
       setReason(error instanceof Error ? error.message : 'Unexpected error validating your license.')
     }

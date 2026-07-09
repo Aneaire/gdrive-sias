@@ -2,7 +2,7 @@
 
 The packaged, saleable version of the RIELAN Survey File System.
 
-A buyer pays once and "owns" a desktop app, a mobile app, and a web app at their own subdomain. One shared Convex deployment + one shared web build; tenants are isolated by `tenantId`. Per-customer branding (name, logo, accent color) is driven by per-tenant rows. License keys are perpetual and revocable, validated server-side on every app launch.
+A buyer pays once and "owns" a desktop app and a web app at their own subdomain. One shared Convex deployment + one shared web build; tenants are isolated by `tenantId`. Per-customer branding (name, logo, accent color) is driven by per-tenant rows. License keys are perpetual and revocable, validated server-side on every app launch.
 
 The full plan lives in [`SaaS/`](./SaaS). Read [`SaaS/README.md`](./SaaS/README.md) first.
 
@@ -12,7 +12,6 @@ The full plan lives in [`SaaS/`](./SaaS). Read [`SaaS/README.md`](./SaaS/README.
 apps/
   web/        TanStack Start + Vite + React 19 (shared by all subdomains; Vercel deploy target)
   desktop/    Electron shell with bundled offline renderer (Phase B wires license-key first run)
-  mobile/     Expo + React Native — deferred to Phase F; not in active workspaces yet
 convex/       Backend: schema, auth, tenant helpers, files queries (all tenant-scoped)
 SaaS/         Architecture, decisions, data model, licensing, OAuth, phases — the source of truth
 scripts/
@@ -78,7 +77,7 @@ bun run desktop        # only Electron
 - Auth and existing product functions ported to tenant scoping: `files.ts` (list, listByScope, search, stats, desktopSync, create*, remove), `shareRecipients.ts`, `deviceSyncStates.ts`, `tenantIntegrations.ts` (disconnect only — full Connect-Drive flow lands in Phase D), `tenants.ts` (getBySubdomain, current, capabilities, brandingForAdmin), `audits.ts`.
 - Web workspace shell (TanStack Start + Vite + Tailwind) with a stub home route; Phase C replaces it with the subdomain resolver + branded file command center.
 - Desktop shell (minimal Electron) wired for `bun run dev:desktop`. Phase B introduces the license-activation first run; Phase D wires the offline SQLite sync.
-- Mobile workspace scaffolded but not in the active workspaces list (Phase F).
+- Mobile app scaffold removed for now; Phase F remains a future rebuild if needed.
 - Scripts: `copy-vercel-output.mjs`, `provision.mjs` (stub), `seed.mjs`.
 
 ## Next phases (see `SaaS/PHASES.md`)
@@ -87,7 +86,7 @@ bun run desktop        # only Electron
 - **Phase C** — Subdomain resolver, branding injection, apex marketing pages, settings pages (members, devices, branding).
 - **Phase D** — "Connect Google Drive" button, per-tenant OAuth, `getTenantAccessToken`, refactor `/drive-upload` and `/drive-download`.
 - **Phase E** — Google OAuth provider, auth nav polish.
-- **Phase F** — Expo mobile app.
+- **Phase F** — Mobile app rebuild if needed.
 - **Phase G** — Audit log UI, device revoke, release-windows.yml packaging simplification.
 
 ## Environment

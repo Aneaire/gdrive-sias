@@ -22,6 +22,7 @@ type TenantWithStats = {
   createdAt: number
   licenseStatus: LicenseStatus | null
   licenseKey: string | null
+  licenseCount: number
   seats: number
   memberCount: number
   deviceCount: number
@@ -66,18 +67,19 @@ export const listTenants = query({
 })
 
 async function withStats(ctx: Pick<QueryCtx, 'db'>, tenant: Doc<'tenants'>): Promise<TenantWithStats> {
-  const license = await ctx.db
+  const licenses = await ctx.db
     .query('licenses')
     .withIndex('by_tenant', (q) => q.eq('tenantId', tenant._id))
-    .first()
+    .collect()
+  const license = licenses[0]
 
   let deviceCount = 0
-  if (license) {
+  for (const row of licenses) {
     const devices = await ctx.db
       .query('licenseDevices')
-      .withIndex('by_key', (q) => q.eq('licenseKey', license.licenseKey))
+      .withIndex('by_key', (q) => q.eq('licenseKey', row.licenseKey))
       .collect()
-    deviceCount = devices.filter((d) => d.revokedAt === undefined).length
+    deviceCount += devices.filter((d) => d.revokedAt === undefined).length
   }
 
   const members = await ctx.db
@@ -100,7 +102,8 @@ async function withStats(ctx: Pick<QueryCtx, 'db'>, tenant: Doc<'tenants'>): Pro
     createdAt: tenant.createdAt,
     licenseStatus: license?.status ?? null,
     licenseKey: license?.licenseKey ?? null,
-    seats: license?.seats ?? 0,
+    licenseCount: licenses.length,
+    seats: licenses.reduce((sum, row) => sum + row.seats, 0),
     memberCount: members.length,
     deviceCount,
     fileCount: files.length,
