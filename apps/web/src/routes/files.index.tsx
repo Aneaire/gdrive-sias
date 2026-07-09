@@ -2,8 +2,9 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
-import { FileText, Folder, MoreVertical, Plus, RotateCcw, Trash2, UploadCloud, X } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { FileText, Folder, Grid3X3, List, Loader2, MoreVertical, Plus, RotateCcw, Table2, Trash2, UploadCloud, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Id } from '@convex/_generated/dataModel'
 
 import { api } from '@convex/_generated/api'
@@ -11,6 +12,12 @@ import { messageFromError } from '../lib/error-message'
 
 type ItemKind = 'folder' | 'file'
 type MoveTarget = { kind: ItemKind; itemId: Id<'folders'> | Id<'files'>; name: string } | null
+type ViewCallbacks = {
+  navigate: (folderId: Id<'folders'>) => void
+  onRename: (target: { id: Id<'folders'>; name: string }) => void
+  onMove: (target: MoveTarget) => void
+  onDelete: (target: DeleteTarget) => void
+}
 type DeleteTarget =
   | { kind: 'folder'; id: Id<'folders'>; name: string }
   | { kind: 'file'; id: Id<'files'>; name: string }
@@ -34,19 +41,94 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
   const moveItem = useMutation(api.folders.move)
   const trashFolder = useMutation(api.folders.trash)
   const deleteFile = useMutation(api.files.remove)
+  const genUploadUrl = useMutation(api.files.generateUploadUrl)
+  const saveUpload = useMutation(api.files.saveStorageUpload)
   const navigate = useNavigate()
 
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [renameTarget, setRenameTarget] = useState<{ id: Id<'folders'>; name: string } | null>(null)
   const [moveTarget, setMoveTarget] = useState<MoveTarget>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'details'>('grid')
+  const [dragOver, setDragOver] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const dragCounter = useRef(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  async function run(action: () => Promise<unknown>) {
+  const openFolder = useCallback((folderId: Id<'folders'>) => {
+    void navigate({ to: '/files/$folderId', params: { folderId } })
+  }, [navigate])
+
+  async function run(action: () => Promise<unknown>, successMessage?: string) {
     try {
       await action()
+      if (successMessage) toast.success(successMessage)
     } catch (error) {
-      alert(messageFromError(error))
+      toast.error(messageFromError(error))
     }
+  }
+
+  async function handleFiles(files: FileList | File[]) {
+    setUploading(true)
+    const total = files.length
+    let completed = 0
+    let failed = 0
+
+    for (const file of Array.from(files)) {
+      try {
+        const url = await genUploadUrl()
+        const response = await fetch(url, { method: 'POST', body: file })
+        if (!response.ok) throw new Error(`Upload failed (${response.status})`)
+        const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
+        await saveUpload({
+          storageId,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type || undefined,
+          folderId,
+        })
+        completed++
+      } catch (error) {
+        failed++
+        console.error(`Failed to upload "${file.name}":`, error)
+      }
+    }
+
+    setUploading(false)
+    if (completed > 0) toast.success(`${completed} of ${total} file(s) uploaded`)
+    if (failed > 0) toast.error(`${failed} file(s) failed to upload`)
+  }
+
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault()
+    setDragOver(false)
+    if (event.dataTransfer.files.length > 0) void handleFiles(event.dataTransfer.files)
+  }
+
+  function handleDragOver(event: React.DragEvent) {
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+  }
+
+  function handleDragEnter(event: React.DragEvent) {
+    event.preventDefault()
+    dragCounter.current++
+    if (dragCounter.current === 1) setDragOver(true)
+  }
+
+  function handleDragLeave(event: React.DragEvent) {
+    event.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setDragOver(false)
+    }
+  }
+
+  function handleFilePick(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files
+    if (files && files.length > 0) void handleFiles(files)
+    event.target.value = ''
   }
 
   return (
@@ -60,52 +142,64 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
           <h1>{crumb?.at(-1)?.name ?? 'My Files'}</h1>
         </div>
         <div className="browser-actions">
+          <div className="view-toggle" role="radiogroup" aria-label="View mode">
+            <button type="button" className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')} aria-label="Grid view" aria-checked={viewMode === 'grid'} role="radio"><Grid3X3 size={16}/></button>
+            <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} aria-label="List view" aria-checked={viewMode === 'list'} role="radio"><List size={16}/></button>
+            <button type="button" className={viewMode === 'details' ? 'active' : ''} onClick={() => setViewMode('details')} aria-label="Details view" aria-checked={viewMode === 'details'} role="radio"><Table2 size={16}/></button>
+          </div>
           <button className="primary-action" onClick={() => setNewFolderOpen(true)}><Plus size={16}/> New folder</button>
         </div>
       </header>
 
-      <section className="drop-indicator" aria-label="Folder upload area">
-        <UploadCloud size={28} aria-hidden="true" />
-        <div>
-          <strong>Create folders here, or drop folders and files into this space.</strong>
-          <p>Use New folder now. Drag-and-drop upload is the next Drive-backed step, so this area shows users where their documents will land.</p>
-        </div>
-      </section>
+      <div
+        className={`drop-zone${uploading ? ' uploading' : ''}`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {dragOver && (
+          <div className="drop-overlay" aria-hidden="true">
+            <UploadCloud size={36} />
+            <strong>Drop files anywhere to upload</strong>
+          </div>
+        )}
 
-      {data === undefined ? <FolderSkeleton /> : data.folders.length + data.files.length === 0 ? <div className="empty-state"><Folder size={42}/><h2>This folder is empty</h2><p>Select <strong>New folder</strong> to start organizing, or drop folders/files here once upload is connected.</p></div> :
-        <div className="drive-grid">
-          {data.folders.map((f) => (
-            <article
-              className="drive-tile clickable"
-              key={f._id}
-              role="link"
-              tabIndex={0}
-              onClick={() => void navigate({ to: '/files/$folderId', params: { folderId: f._id } })}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  void navigate({ to: '/files/$folderId', params: { folderId: f._id } })
-                }
-              }}
-            >
-              <Folder className="folder-icon"/><Link to="/files/$folderId" params={{ folderId: f._id }} onClick={(event) => event.stopPropagation()}>{f.name}</Link>
-              <Menu
-                onRename={() => setRenameTarget({ id: f._id, name: f.name })}
-                onMove={() => setMoveTarget({ kind: 'folder', itemId: f._id, name: f.name })}
-                onDelete={() => setDeleteTarget({ kind: 'folder', id: f._id, name: f.name })}
-              />
-            </article>
-          ))}
-          {data.files.map((f) => (
-            <article className="drive-tile file clickable" key={f._id} tabIndex={0} aria-label={`${f.name}, ${formatBytes(f.size)}, ${f.storageStatus}`}>
-              <FileText/><strong>{f.name}</strong><small>{formatBytes(f.size)} · {f.storageStatus}</small>
-              <Menu
-                onMove={() => setMoveTarget({ kind: 'file', itemId: f._id, name: f.name })}
-                onDelete={() => setDeleteTarget({ kind: 'file', id: f._id, name: f.name })}
-              />
-            </article>
-          ))}
-        </div>}
+        <section
+          className={`drop-indicator${dragOver ? ' drag-over' : ''}${uploading ? ' uploading' : ''}`}
+          aria-label="Click to upload files"
+          onClick={() => fileInputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              fileInputRef.current?.click()
+            }
+          }}
+        >
+          {uploading ? <Loader2 size={28} className="spin" aria-hidden="true" /> : <UploadCloud size={28} aria-hidden="true" />}
+          <div>
+            {uploading
+              ? <strong>Uploading files…</strong>
+              : <strong>Drop files here, or click to upload</strong>}
+            <p>You can also drop files anywhere in this area.</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="file-input-hidden"
+            aria-hidden="true"
+            onChange={handleFilePick}
+          />
+        </section>
+
+        {data === undefined ? <FolderSkeleton /> : data.folders.length + data.files.length === 0 ? <div className="empty-state"><Folder size={42}/><h2>This folder is empty</h2><p>Create a folder or drop files here to start organizing.</p></div> :
+          viewMode === 'grid' ? <GridView data={data} navigate={openFolder} onRename={setRenameTarget} onMove={setMoveTarget} onDelete={setDeleteTarget} /> :
+          viewMode === 'list' ? <ListView data={data} navigate={openFolder} onRename={setRenameTarget} onMove={setMoveTarget} onDelete={setDeleteTarget} /> :
+          <DetailsView data={data} navigate={openFolder} onRename={setRenameTarget} onMove={setMoveTarget} onDelete={setDeleteTarget} />}
+      </div>
 
       <NameDialog
         open={newFolderOpen}
@@ -115,7 +209,7 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
         submitLabel="Create folder"
         onOpenChange={setNewFolderOpen}
         onSubmit={async (name) => {
-          await run(() => createFolder({ name, parentId: folderId }))
+          await run(() => createFolder({ name, parentId: folderId }), 'Folder created')
           setNewFolderOpen(false)
         }}
       />
@@ -130,7 +224,7 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
         onOpenChange={(open) => { if (!open) setRenameTarget(null) }}
         onSubmit={async (name) => {
           if (!renameTarget) return
-          await run(() => renameFolder({ folderId: renameTarget.id, name }))
+          await run(() => renameFolder({ folderId: renameTarget.id, name }), 'Folder renamed')
           setRenameTarget(null)
         }}
       />
@@ -140,7 +234,7 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
         onOpenChange={(open) => { if (!open) setMoveTarget(null) }}
         onSubmit={async (targetParentId) => {
           if (!moveTarget) return
-          await run(() => moveItem({ kind: moveTarget.kind, itemId: moveTarget.itemId, targetParentId }))
+          await run(() => moveItem({ kind: moveTarget.kind, itemId: moveTarget.itemId, targetParentId }), 'Item moved')
           setMoveTarget(null)
         }}
       />
@@ -155,8 +249,8 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         onConfirm={async () => {
           if (!deleteTarget) return
-          if (deleteTarget.kind === 'folder') await run(() => trashFolder({ folderId: deleteTarget.id }))
-          else await run(() => deleteFile({ id: deleteTarget.id }))
+          if (deleteTarget.kind === 'folder') await run(() => trashFolder({ folderId: deleteTarget.id }), 'Moved to trash')
+          else await run(() => deleteFile({ id: deleteTarget.id }), 'Moved to trash')
           setDeleteTarget(null)
         }}
       />
@@ -309,8 +403,74 @@ function TrashView() {
   const restore = useMutation(api.folders.restore)
   const purge = useMutation(api.folders.purge)
   const [purgeTarget, setPurgeTarget] = useState<DeleteTarget>(null)
-  async function run(action: () => Promise<unknown>) { try { await action() } catch (error) { alert(messageFromError(error)) } }
-  return <div className="browser-panel"><header className="browser-header"><div><p className="eyebrow">Trash</p><h1>Deleted items</h1></div></header>{trash === undefined ? <p className="muted">Loading trash…</p> : trash.folders.length + trash.files.length === 0 ? <div className="empty-state"><Trash2 size={42}/><h2>Trash is empty</h2></div> : <div className="trash-list">{trash.folders.map((f) => <div key={f._id}><Folder/><strong>{f.name}</strong><button onClick={() => run(() => restore({ folderId: f._id }))}><RotateCcw size={14}/> Restore</button><button onClick={() => setPurgeTarget({ kind: 'folder', id: f._id, name: f.name })}>Purge</button></div>)}{trash.files.map((f) => <div key={f._id}><FileText/><strong>{f.name}</strong><button onClick={() => run(() => restore({ fileId: f._id }))}><RotateCcw size={14}/> Restore</button><button onClick={() => setPurgeTarget({ kind: 'file', id: f._id, name: f.name })}>Purge</button></div>)}</div>}<ConfirmDialog target={purgeTarget} title="Delete permanently?" description={`“${purgeTarget?.name ?? ''}” will be permanently deleted. This cannot be undone.`} actionLabel="Delete permanently" onOpenChange={(open) => { if (!open) setPurgeTarget(null) }} onConfirm={async () => { if (!purgeTarget) return; if (purgeTarget.kind === 'folder') await run(() => purge({ folderId: purgeTarget.id })); else await run(() => purge({ fileId: purgeTarget.id })); setPurgeTarget(null) }} /></div>
+  async function run(action: () => Promise<unknown>, successMessage?: string) { try { await action(); if (successMessage) toast.success(successMessage) } catch (error) { toast.error(messageFromError(error)) } }
+  return <div className="browser-panel"><header className="browser-header"><div><p className="eyebrow">Trash</p><h1>Deleted items</h1></div></header>{trash === undefined ? <p className="muted">Loading trash…</p> : trash.folders.length + trash.files.length === 0 ? <div className="empty-state"><Trash2 size={42}/><h2>Trash is empty</h2></div> : <div className="trash-list">{trash.folders.map((f) => <div key={f._id}><Folder/><strong>{f.name}</strong><button onClick={() => run(() => restore({ folderId: f._id }), 'Restored')}><RotateCcw size={14}/> Restore</button><button onClick={() => setPurgeTarget({ kind: 'folder', id: f._id, name: f.name })}>Purge</button></div>)}{trash.files.map((f) => <div key={f._id}><FileText/><strong>{f.name}</strong><button onClick={() => run(() => restore({ fileId: f._id }), 'Restored')}><RotateCcw size={14}/> Restore</button><button onClick={() => setPurgeTarget({ kind: 'file', id: f._id, name: f.name })}>Purge</button></div>)}</div>}<ConfirmDialog target={purgeTarget} title="Delete permanently?" description={`“${purgeTarget?.name ?? ''}” will be permanently deleted. This cannot be undone.`} actionLabel="Delete permanently" onOpenChange={(open) => { if (!open) setPurgeTarget(null) }} onConfirm={async () => { if (!purgeTarget) return; if (purgeTarget.kind === 'folder') await run(() => purge({ folderId: purgeTarget.id }), 'Permanently deleted'); else await run(() => purge({ fileId: purgeTarget.id }), 'Permanently deleted'); setPurgeTarget(null) }} /></div>
 }
 
 function formatBytes(bytes: number) { if (bytes === 0) return '0 B'; const units = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(1024)); return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}` }
+
+type ChildrenData = {
+  folders: Array<{ _id: Id<'folders'>; name: string }>
+  files: Array<{ _id: Id<'files'>; name: string; size: number; storageStatus: string }>
+}
+
+function GridView({ data, navigate, onRename, onMove, onDelete }: { data: ChildrenData } & ViewCallbacks) {
+  return (
+    <div className="drive-grid">
+      {data.folders.map((f) => (
+        <article className="drive-tile clickable" key={f._id} role="link" tabIndex={0}
+          onClick={() => navigate(f._id)}
+          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(f._id) } }}>
+          <Folder className="folder-icon"/><Link to="/files/$folderId" params={{ folderId: f._id }} onClick={(event) => event.stopPropagation()}>{f.name}</Link>
+          <Menu onRename={() => onRename({ id: f._id, name: f.name })} onMove={() => onMove({ kind: 'folder', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'folder', id: f._id, name: f.name })} />
+        </article>
+      ))}
+      {data.files.map((f) => (
+        <article className="drive-tile file clickable" key={f._id} tabIndex={0} aria-label={`${f.name}, ${formatBytes(f.size)}, ${f.storageStatus}`}>
+          <FileText/><strong>{f.name}</strong><small>{formatBytes(f.size)} · {f.storageStatus}</small>
+          <Menu onMove={() => onMove({ kind: 'file', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'file', id: f._id, name: f.name })} />
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function ListView({ data, navigate }: { data: ChildrenData } & ViewCallbacks) {
+  return (
+    <div className="list-view">
+      {[...data.folders.map((f) => ({ ...f, kind: 'folder' as const })), ...data.files.map((f) => ({ ...f, kind: 'file' as const }))].map((item) => (
+        <div className={`list-row ${item.kind}`} key={item._id} role="link" tabIndex={0}
+          onClick={() => item.kind === 'folder' ? navigate((item as any)._id) : undefined}
+          onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && item.kind === 'folder') { event.preventDefault(); navigate((item as any)._id) } }}>
+          <span className="list-row-icon">{item.kind === 'folder' ? <Folder className="folder-icon" size={18}/> : <FileText size={18}/>}</span>
+          <span className="list-row-name">{item.name}</span>
+          <span className="list-row-meta">{item.kind === 'file' ? `${formatBytes((item as any).size)} · ${(item as any).storageStatus}` : 'Folder'}</span>
+          <button type="button" className="list-row-menu" aria-label="Open item menu" onClick={(event) => event.stopPropagation()}>⋯</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DetailsView({ data, navigate }: { data: ChildrenData } & ViewCallbacks) {
+  return (
+    <table className="details-table">
+      <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Status</th></tr></thead>
+      <tbody>
+        {data.folders.map((f) => (
+          <tr key={f._id} className="details-row" role="link" tabIndex={0} onClick={() => navigate(f._id)}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(f._id) } }}>
+            <td><Folder className="folder-icon" size={16}/> {f.name}</td>
+            <td>Folder</td><td>—</td><td>—</td>
+          </tr>
+        ))}
+        {data.files.map((f) => (
+          <tr key={f._id} className="details-row">
+            <td><FileText size={16}/> {f.name}</td>
+            <td>File</td><td>{formatBytes(f.size)}</td><td>{f.storageStatus}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}

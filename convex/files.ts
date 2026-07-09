@@ -341,6 +341,68 @@ export const remove = mutation({
 })
 
 /**
+ * Returns a one-time upload URL for Convex file storage.
+ * The client POSTs the file to this URL, then passes the returned
+ * storageId to `saveStorageUpload`.
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireTenantMember(ctx)
+    return await ctx.storage.generateUploadUrl()
+  },
+})
+
+/**
+ * Creates a file record for a file already stored in Convex storage.
+ * Call this after uploading bytes via the URL from `generateUploadUrl`.
+ */
+export const saveStorageUpload = mutation({
+  args: {
+    storageId: v.id('_storage'),
+    name: v.string(),
+    size: v.number(),
+    mimeType: v.optional(v.string()),
+    folderId: v.optional(v.id('folders')),
+  },
+  handler: async (ctx, args) => {
+    const { tenantId } = await requireLicenseActive(ctx)
+    const now = Date.now()
+    return await ctx.db.insert('files', {
+      tenantId,
+      folderId: args.folderId,
+      categoryId: 0,
+      categoryName: '',
+      municipality: '',
+      barangay: '',
+      name: args.name.trim() || 'Untitled file',
+      mimeType: args.mimeType,
+      size: args.size,
+      uploadedAt: now,
+      updatedAt: now,
+      storageStatus: 'stored',
+      storageProvider: 'convex',
+      convexStorageId: args.storageId,
+    })
+  },
+})
+
+/**
+ * Returns a download URL for a file stored in Convex storage.
+ * Returns null if the file doesn't use Convex storage or is not stored.
+ */
+export const getStorageDownloadUrl = query({
+  args: { fileId: v.id('files') },
+  handler: async (ctx, args) => {
+    const { tenantId } = await requireTenantMember(ctx)
+    const file = await ctx.db.get(args.fileId)
+    if (!file || file.tenantId !== tenantId) return null
+    if (file.storageProvider !== 'convex' || !file.convexStorageId) return null
+    return await ctx.storage.getUrl(file.convexStorageId)
+  },
+})
+
+/**
  * Internal: returns a file by id for the storage pipeline.
  * Does not enforce tenant scoping — only callable from other Convex functions
  * that have already verified the caller's membership.
