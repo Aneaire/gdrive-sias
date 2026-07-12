@@ -1,6 +1,8 @@
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { ConvexReactClient } from 'convex/react'
 
+preserveGoogleDriveOauthCode()
+
 const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined
 const convexSiteUrl =
   (import.meta.env.VITE_CONVEX_SITE_URL as string | undefined) ?? deriveSiteUrl(convexUrl)
@@ -33,6 +35,29 @@ export default function AppConvexProvider({
 }) {
   if (!convexClient) return <>{children}</>
   return <ConvexAuthProvider client={convexClient}>{children}</ConvexAuthProvider>
+}
+
+function preserveGoogleDriveOauthCode() {
+  if (typeof window === 'undefined') return
+  if (!window.location.pathname.endsWith('/settings/integrations')) return
+
+  const url = new URL(window.location.href)
+  const code = url.searchParams.get('code')
+  const state = url.searchParams.get('state')
+  const issuer = url.searchParams.get('iss')
+  const scope = url.searchParams.get('scope')
+  const looksLikeGoogleDriveCallback =
+    Boolean(code && state) &&
+    (issuer === 'https://accounts.google.com' || scope?.includes('googleapis.com/auth/drive'))
+
+  if (!looksLikeGoogleDriveCallback) return
+
+  // Convex Auth's Password provider also consumes a top-level `?code=` query
+  // parameter for email-code sign-in. Google Drive OAuth returns its auth code
+  // with the same name, so move it before ConvexAuthProvider initializes.
+  url.searchParams.set('drive_code', code)
+  url.searchParams.delete('code')
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
 function deriveSiteUrl(clientUrl: string | undefined): string | undefined {

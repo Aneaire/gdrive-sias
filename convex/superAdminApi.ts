@@ -461,13 +461,19 @@ export const inviteMember = mutation({
       )
     }
 
+    const existingUser = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', normalized))
+      .unique()
     const now = Date.now()
     const id = await ctx.db.insert('tenantMembers', {
       tenantId: args.tenantId,
       role: args.role,
-      status: 'invited',
+      status: existingUser ? 'active' : 'invited',
+      userId: existingUser?._id,
       invitedEmail: normalized,
       invitedAt: now,
+      ...(existingUser ? { joinedAt: now } : {}),
     })
 
     await ctx.db.insert('audits', {

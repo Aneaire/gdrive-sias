@@ -30,6 +30,7 @@ export async function createOrUpdateInvitedUser(
   if (!email) throw new Error('Enter a valid email address.')
 
   // Superadmins bypass the invitation gate — they're platform operators.
+  // But they can still be invited to tenants; check for pending invitations.
   if (await isSuperAdminEmail(ctx, email)) {
     const userId: Id<'users'> =
       args.existingUserId ??
@@ -38,6 +39,20 @@ export async function createOrUpdateInvitedUser(
         .withIndex('email', (q) => q.eq('email', email))
         .unique())?._id ??
       (await ctx.db.insert('users', { email }))
+
+    const invitationRows = await ctx.db
+      .query('tenantMembers')
+      .withIndex('by_invited_email', (q) => q.eq('invitedEmail', email))
+      .collect()
+    const invitation = invitationRows.find((m) => m.status === 'invited') ?? null
+    if (invitation && invitation.userId !== userId) {
+      await ctx.db.patch(invitation._id, {
+        userId,
+        status: 'active',
+        joinedAt: Date.now(),
+      })
+    }
+
     return userId
   }
 

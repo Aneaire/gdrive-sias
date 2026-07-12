@@ -35,8 +35,8 @@ export const handleDriveOauthCallback = httpAction(async (ctx, req) => {
   const origin = req.headers.get('origin') ?? req.headers.get('referer') ?? ''
   const host = origin ? new URL(origin).host : ''
   const redirectUri = host
-    ? `https://${host}/settings/integrations`
-    : 'https://localhost:3000/settings/integrations'
+    ? `${host.includes('localhost:3000') ? 'http:' : 'https:'}//${host}/settings/integrations`
+    : 'http://localhost:3000/settings/integrations'
 
   let tokenResponse: Response
   try {
@@ -80,13 +80,17 @@ export const handleDriveOauthCallback = httpAction(async (ctx, req) => {
     )
   }
 
-  let connectedEmail: string
+  let connectedEmail = 'unknown'
   try {
     const userInfoRes = await fetch(GOOGLE_USERINFO_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-    const userInfo = await userInfoRes.json()
-    connectedEmail = userInfo.email as string
+    if (userInfoRes.ok) {
+      const userInfo = await userInfoRes.json()
+      if (typeof userInfo.email === 'string' && userInfo.email.trim()) {
+        connectedEmail = userInfo.email.trim()
+      }
+    }
   } catch {
     connectedEmail = 'unknown'
   }

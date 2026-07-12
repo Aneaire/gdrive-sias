@@ -1,0 +1,17 @@
+node_modules
+dist
+.vercel
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+*.local
+.env
+.env.local
+.DS_Store
+todos.json
+.tsbuildinfo
+apps/desktop/dist
+apps/mobile

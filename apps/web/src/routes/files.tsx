@@ -1,7 +1,7 @@
 import { Authenticated, AuthLoading, Unauthenticated, useQuery } from 'convex/react'
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
 import { useAuthActions } from '@convex-dev/auth/react'
-import { FolderOpen, LogOut, Menu, Settings, Trash2, X } from 'lucide-react'
+import { FolderOpen, LogOut, Menu, Plug, Settings, Trash2, X } from 'lucide-react'
 
 import { api } from '@convex/_generated/api'
 import { useState } from 'react'
@@ -39,6 +39,30 @@ function Shell() {
   const { signOut } = useAuthActions()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  if (tenant === null) {
+    return (
+      <main className="auth-shell">
+        <div className="drive-no-membership-card">
+          <div className="drive-no-membership-icon">
+            <FolderOpen size={32} />
+          </div>
+          <h2>No tenant access</h2>
+          <p>
+            You are not a member of any tenant. Ask your admin to invite you, or
+            sign out and try a different account.
+          </p>
+          <button
+            type="button"
+            className="primary-action"
+            onClick={() => void signOut()}
+          >
+            <LogOut size={16} /> Sign out
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className={`drive-shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
       <button
@@ -56,7 +80,12 @@ function Shell() {
         <nav className="drive-nav">
           <Link to="/files" search={{ trash: false }} onClick={() => setSidebarOpen(false)}><FolderOpen size={16} /> My Files</Link>
           <Link to="/files" search={{ trash: true }} onClick={() => setSidebarOpen(false)}><Trash2 size={16} /> Trash</Link>
-          {tenant?.role === 'admin' ? <Link to="/settings/members" onClick={() => setSidebarOpen(false)}><Settings size={16} /> Members</Link> : null}
+          {tenant?.role === 'admin' ? (
+            <Link to="/settings/members" onClick={() => setSidebarOpen(false)}><Settings size={16} /> Members</Link>
+          ) : null}
+          {tenant?.role === 'admin' ? (
+            <Link to="/settings/integrations" search={{ drive_code: undefined, state: undefined, error: undefined }} onClick={() => setSidebarOpen(false)}><Plug size={16} /> Integrations</Link>
+          ) : null}
         </nav>
         <button type="button" className="ghost-action" onClick={() => void signOut()}><LogOut size={16} /> Sign out</button>
       </aside>
