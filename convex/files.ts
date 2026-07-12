@@ -290,35 +290,37 @@ export const createOfflineUploadRecord = mutation({
 /**
  * Marks a pending upload as permanently failed (used by the sync service when retries exhaust).
  */
+const failDriveUploadArgs = {
+  id: v.id('files'),
+  error: v.string(),
+  driveFileId: v.optional(v.string()),
+}
+
+async function markDriveUploadFailed(ctx: MutationCtx, args: { id: Id<'files'>; error: string; driveFileId?: string }) {
+  const file = await ctx.db.get(args.id)
+  if (!file || file.storageStatus === 'stored') return
+  await ctx.db.patch(args.id, {
+    storageStatus: 'failed',
+    storageProvider: 'google_drive',
+    uploadError: args.error.slice(0, 1000),
+    updatedAt: Date.now(),
+    ...(args.driveFileId ? { driveFileId: args.driveFileId } : {}),
+  })
+}
+
 export const failDriveUpload = mutation({
-  args: {
-    id: v.id('files'),
-    error: v.string(),
-    driveFileId: v.optional(v.string()),
-  },
+  args: failDriveUploadArgs,
   handler: async (ctx, args) => {
     const { tenantId } = await requireTenantMember(ctx)
     const file = await ctx.db.get(args.id)
     if (!file || file.tenantId !== tenantId) return
-    if (file.storageStatus === 'stored') return
-
-    const patch: {
-      storageStatus: 'failed'
-      storageProvider: 'google_drive'
-      uploadError: string
-      updatedAt: number
-      driveFileId?: string
-    } = {
-      storageStatus: 'failed',
-      storageProvider: 'google_drive',
-      uploadError: args.error.slice(0, 1000),
-      updatedAt: Date.now(),
-    }
-
-    if (args.driveFileId) patch.driveFileId = args.driveFileId
-
-    await ctx.db.patch(args.id, patch)
+    await markDriveUploadFailed(ctx, args)
   },
+})
+
+export const failDriveUploadInternal = internalMutation({
+  args: failDriveUploadArgs,
+  handler: async (ctx, args) => { await markDriveUploadFailed(ctx, args) },
 })
 
 /**
@@ -391,6 +393,51 @@ export const saveStorageUpload = mutation({
  * Returns a download URL for a file stored in Convex storage.
  * Returns null if the file doesn't use Convex storage or is not stored.
  */
+/**
+ * Creates a short-lived, single-use link for downloading a Drive file through
+ * the app's authenticated Drive connection. This avoids relying on the
+ * browser's currently signed-in Google account.
+ */
+export const createDriveDownloadToken = mutation({
+  args: { fileId: v.id('files') },
+  handler: async (ctx, args) => {
+    const { tenantId } = await requireTenantMember(ctx)
+    const file = await ctx.db.get(args.fileId)
+    if (!file || file.tenantId !== tenantId || !file.driveFileId) {
+      throw new Error('Drive file not found.')
+    }
+
+    const token = crypto.randomUUID()
+    await ctx.db.insert('downloadTokens', {
+      tenantId,
+      fileId: file._id,
+      token,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    })
+    return { token }
+  },
+})
+
+/** Internal HTTP helper: validates and consumes a one-time download token. */
+export const consumeDriveDownloadToken = internalMutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const link = await ctx.db
+      .query('downloadTokens')
+      .withIndex('by_token', (q) => q.eq('token', args.token))
+      .unique()
+    if (!link || link.expiresAt < Date.now()) {
+      if (link) await ctx.db.delete(link._id)
+      return null
+    }
+
+    await ctx.db.delete(link._id)
+    const file = await ctx.db.get(link.fileId)
+    if (!file || file.tenantId !== link.tenantId || !file.driveFileId || file.deletedAt !== undefined) return null
+    return { tenantId: link.tenantId, driveFileId: file.driveFileId, name: file.name }
+  },
+})
+
 export const getStorageDownloadUrl = query({
   args: { fileId: v.id('files') },
   handler: async (ctx, args) => {
@@ -411,6 +458,28 @@ export const getForStorage = internalQuery({
   args: { id: v.id('files') },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id)
+  },
+})
+
+/**
+ * Internal action helper. Confirms that the authenticated action caller owns
+ * the file's tenant before exposing its Drive-upload metadata.
+ */
+export const getForDriveUpload = internalQuery({
+  args: { id: v.id('files'), authSubject: v.string() },
+  handler: async (ctx, args) => {
+    const file = await ctx.db.get(args.id)
+    if (!file) return null
+
+    const users = await Promise.all(args.authSubject.split('|').map(async (part) => {
+      try { return await ctx.db.get(part as Id<'users'>) } catch { return null }
+    }))
+    const userIds = users.filter((user): user is NonNullable<typeof user> => user !== null).map((user) => user._id)
+    const memberships = (await Promise.all(userIds.map((userId) =>
+      ctx.db.query('tenantMembers').withIndex('by_user', (q) => q.eq('userId', userId)).collect(),
+    ))).flat()
+    const member = memberships.find((membership) => membership.tenantId === file.tenantId && membership.status === 'active')
+    return member ? file : null
   },
 })
 

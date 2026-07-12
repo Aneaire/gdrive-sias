@@ -50,7 +50,7 @@ function preserveGoogleDriveOauthCode() {
     Boolean(code && state) &&
     (issuer === 'https://accounts.google.com' || scope?.includes('googleapis.com/auth/drive'))
 
-  if (!looksLikeGoogleDriveCallback) return
+  if (!looksLikeGoogleDriveCallback || !code) return
 
   // Convex Auth's Password provider also consumes a top-level `?code=` query
   // parameter for email-code sign-in. Google Drive OAuth returns its auth code

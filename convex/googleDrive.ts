@@ -1,4 +1,5 @@
-import { httpAction } from './_generated/server'
+import { action, httpAction } from './_generated/server'
+import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
 import { DriveNotConnectedError, DriveReconnectNeededError, requireTenantMember } from './tenantHelpers'
@@ -109,6 +110,40 @@ export async function ensureFolderPath(rootFolderId: string): Promise<string> {
 }
 
 /**
+ * Uploads browser file bytes directly to the tenant's connected Drive.
+ * The action validates the caller's membership against the file before using
+ * the tenant's encrypted Drive credentials.
+ */
+export const uploadFile = action({
+  args: { id: v.id('files'), bytes: v.bytes() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated.')
+
+    const file = await ctx.runQuery(internal.files.getForDriveUpload, {
+      id: args.id,
+      authSubject: identity.subject,
+    })
+    if (!file) throw new Error('File not found.')
+
+    try {
+      await uploadBytesToDrive(ctx, file.tenantId, {
+        fileId: args.id,
+        name: file.name,
+        mimeType: file.mimeType ?? 'application/octet-stream',
+        bytes: new Uint8Array(args.bytes),
+      })
+    } catch (error) {
+      await ctx.runMutation(internal.files.failDriveUploadInternal, {
+        id: args.id,
+        error: error instanceof Error ? error.message : 'Drive upload failed.',
+      })
+      throw error
+    }
+  },
+})
+
+/**
  * POST /drive-upload
  *
  * Uploads a file to the tenant's Google Drive.
@@ -150,60 +185,19 @@ export const handleDriveUpload = httpAction(async (ctx, req) => {
     return json({ error: error.message }, status, headers)
   }
 
-  const targetFolderId = folderId ?? (await resolveRootFolder(ctx, tenantId))
-
-  const fileBytes = base64ToBytes(base64Content)
-  const metadata = { name, mimeType, parents: [targetFolderId] }
-  const boundary = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-
-  const encoder = new TextEncoder()
-  const parts = [
-    encoder.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`),
-    encoder.encode(JSON.stringify(metadata)),
-    encoder.encode(`\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`),
-    fileBytes,
-    encoder.encode(`\r\n--${boundary}--\r\n`),
-  ]
-  const totalLen = parts.reduce((s, p) => s + p.byteLength, 0)
-  const bodyArr = new Uint8Array(totalLen)
-  let offset = 0
-  for (const p of parts) {
-    bodyArr.set(p, offset)
-    offset += p.byteLength
-  }
-
-  let driveRes: Response
+  let driveFile: { id: string; webViewLink?: string; name?: string }
   try {
-    driveRes = await fetch(`${GOOGLE_DRIVE_UPLOAD}?uploadType=multipart`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': String(totalLen),
-      },
-      body: bodyArr,
+    driveFile = await uploadBytesToDrive(ctx, tenantId, {
+      fileId: fileId as Id<'files'>,
+      name,
+      mimeType,
+      bytes: base64ToBytes(base64Content),
+      folderId,
+      accessToken,
     })
-  } catch {
-    return json({ error: 'Failed to upload to Google Drive.' }, 502, headers)
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : 'Failed to upload to Google Drive.' }, 502, headers)
   }
-
-  if (!driveRes.ok) {
-    const errorText = await driveRes.text().catch(() => '')
-    return json({ error: `Drive upload failed: ${errorText}` }, driveRes.status, headers)
-  }
-
-  const driveFile = await driveRes.json()
-
-  await ctx.runMutation(internal.files.markDriveUploadStored, {
-    id: fileId as Id<'files'>,
-    driveFileId: driveFile.id as string,
-    driveFolderId: targetFolderId,
-    driveWebViewLink: driveFile.webViewLink as string | undefined,
-    driveWebContentLink: driveFile.webContentLink as string | undefined,
-    driveMd5Checksum: driveFile.md5Checksum as string | undefined,
-    mimeType: driveFile.mimeType as string | undefined,
-    size: driveFile.size ? Number(driveFile.size) : undefined,
-  })
 
   return json(
     {
@@ -221,28 +215,19 @@ export const handleDriveUpload = httpAction(async (ctx, req) => {
  * GET /drive-download
  *
  * Proxies a file download from the tenant's Google Drive.
- * Query params: driveFileId
+ * Query params: token (a short-lived, single-use app download token)
  */
 export const handleDriveDownload = httpAction(async (ctx, req) => {
   const headers = corsHeaders(req)
-  const url = new URL(req.url)
-  const driveFileId = url.searchParams.get('driveFileId')
+  const token = new URL(req.url).searchParams.get('token')
+  if (!token) return json({ error: 'Download token is required.' }, 400, headers)
 
-  if (!driveFileId) {
-    return json({ error: 'driveFileId is required.' }, 400, headers)
-  }
-
-  let tenantId: Id<'tenants'>
-  try {
-    const member = await requireTenantMember(ctx as any)
-    tenantId = member.tenantId
-  } catch (error: any) {
-    return json({ error: error.message ?? 'Not authenticated.' }, 401, headers)
-  }
+  const download = await ctx.runMutation(internal.files.consumeDriveDownloadToken, { token })
+  if (!download) return json({ error: 'This download link has expired. Try again from the app.' }, 403, headers)
 
   let accessToken: string
   try {
-    accessToken = await getTenantAccessToken(ctx, tenantId)
+    accessToken = await getTenantAccessToken(ctx, download.tenantId)
   } catch (error: any) {
     const status = error instanceof DriveNotConnectedError ? 403 : 502
     return json({ error: error.message }, status, headers)
@@ -250,7 +235,7 @@ export const handleDriveDownload = httpAction(async (ctx, req) => {
 
   let driveRes: Response
   try {
-    driveRes = await fetch(`${GOOGLE_DRIVE_API}/${driveFileId}?alt=media`, {
+    driveRes = await fetch(`${GOOGLE_DRIVE_API}/${download.driveFileId}?alt=media`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
   } catch {
@@ -262,14 +247,15 @@ export const handleDriveDownload = httpAction(async (ctx, req) => {
   }
 
   const contentType = driveRes.headers.get('Content-Type') ?? 'application/octet-stream'
-  const contentDisposition = driveRes.headers.get('Content-Disposition')
   const contentLength = driveRes.headers.get('Content-Length')
 
   const responseHeaders: Record<string, string> = {
     ...headers,
     'Content-Type': contentType,
   }
-  if (contentDisposition) responseHeaders['Content-Disposition'] = contentDisposition
+  // Google returns a generic "drive-download" filename. The app owns the
+  // filename shown to the user, so always replace that upstream header.
+  responseHeaders['Content-Disposition'] = `attachment; filename*=UTF-8''${encodeURIComponent(download.name)}`
   if (contentLength) responseHeaders['Content-Length'] = contentLength
 
   return new Response(driveRes.body, {
@@ -277,6 +263,48 @@ export const handleDriveDownload = httpAction(async (ctx, req) => {
     headers: responseHeaders,
   })
 })
+
+async function uploadBytesToDrive(
+  ctx: CtxShape,
+  tenantId: Id<'tenants'>,
+  input: { fileId: Id<'files'>; name: string; mimeType: string; bytes: Uint8Array; folderId?: string; accessToken?: string },
+) {
+  const accessToken = input.accessToken ?? await getTenantAccessToken(ctx, tenantId)
+  const targetFolderId = input.folderId ?? await resolveRootFolder(ctx, tenantId)
+  const boundary = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+  const encoder = new TextEncoder()
+  const parts = [
+    encoder.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`),
+    encoder.encode(JSON.stringify({ name: input.name, mimeType: input.mimeType, parents: [targetFolderId] })),
+    encoder.encode(`\r\n--${boundary}\r\nContent-Type: ${input.mimeType}\r\n\r\n`),
+    input.bytes,
+    encoder.encode(`\r\n--${boundary}--\r\n`),
+  ]
+  const totalLen = parts.reduce((sum, part) => sum + part.byteLength, 0)
+  const body = new Uint8Array(totalLen)
+  let offset = 0
+  for (const part of parts) { body.set(part, offset); offset += part.byteLength }
+
+  const response = await fetch(`${GOOGLE_DRIVE_UPLOAD}?uploadType=multipart&fields=id,name,webViewLink,webContentLink,md5Checksum,mimeType,size`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  if (!response.ok) throw new Error(`Drive upload failed: ${await response.text().catch(() => response.statusText)}`)
+
+  const driveFile = await response.json()
+  await ctx.runMutation(internal.files.markDriveUploadStored, {
+    id: input.fileId,
+    driveFileId: driveFile.id as string,
+    driveFolderId: targetFolderId,
+    driveWebViewLink: driveFile.webViewLink as string | undefined,
+    driveWebContentLink: driveFile.webContentLink as string | undefined,
+    driveMd5Checksum: driveFile.md5Checksum as string | undefined,
+    mimeType: driveFile.mimeType as string | undefined,
+    size: driveFile.size ? Number(driveFile.size) : undefined,
+  })
+  return driveFile as { id: string; webViewLink?: string; name?: string }
+}
 
 async function resolveRootFolder(ctx: CtxShape, tenantId: Id<'tenants'>): Promise<string> {
   const integration = await ctx.runQuery(internal.tenantIntegrations.getForUpload, { tenantId })

@@ -195,6 +195,15 @@ export default defineSchema({
     .index('by_tenant_deleted', ['tenantId', 'deletedAt'])
     .index('by_tenant_drive_folder_id', ['tenantId', 'driveFolderId']),
 
+  // Short-lived, single-use bearer tokens allow a browser download to be
+  // authorized by the app without requiring the browser's Google account.
+  downloadTokens: defineTable({
+    tenantId: v.id('tenants'),
+    fileId: v.id('files'),
+    token: v.string(),
+    expiresAt: v.number(),
+  }).index('by_token', ['token']),
+
   shareRecipients: defineTable({
     tenantId: v.id('tenants'),
     email: v.string(),

@@ -1,7 +1,7 @@
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { FileText, Folder, Grid3X3, List, Loader2, MoreVertical, Plus, RotateCcw, Table2, Trash2, UploadCloud, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -9,6 +9,7 @@ import type { Id } from '@convex/_generated/dataModel'
 
 import { api } from '@convex/_generated/api'
 import { messageFromError } from '../lib/error-message'
+import { getConvexHttpUrl } from '../integrations/convex/provider'
 
 type ItemKind = 'folder' | 'file'
 type MoveTarget = { kind: ItemKind; itemId: Id<'folders'> | Id<'files'>; name: string } | null
@@ -41,8 +42,8 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
   const moveItem = useMutation(api.folders.move)
   const trashFolder = useMutation(api.folders.trash)
   const deleteFile = useMutation(api.files.remove)
-  const genUploadUrl = useMutation(api.files.generateUploadUrl)
-  const saveUpload = useMutation(api.files.saveStorageUpload)
+  const createDriveUploadRecord = useMutation(api.files.createDriveUploadRecord)
+  const uploadToDrive = useAction(api.googleDrive.uploadFile)
   const navigate = useNavigate()
 
   const [newFolderOpen, setNewFolderOpen] = useState(false)
@@ -76,17 +77,19 @@ export function FolderView({ folderId }: { folderId?: Id<'folders'> }) {
 
     for (const file of Array.from(files)) {
       try {
-        const url = await genUploadUrl()
-        const response = await fetch(url, { method: 'POST', body: file })
-        if (!response.ok) throw new Error(`Upload failed (${response.status})`)
-        const { storageId } = (await response.json()) as { storageId: Id<'_storage'> }
-        await saveUpload({
-          storageId,
-          name: file.name,
-          size: file.size,
-          mimeType: file.type || undefined,
-          folderId,
+        const id = await createDriveUploadRecord({
+          file: {
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || undefined,
+            folderId,
+            categoryId: 0,
+            categoryName: '',
+            municipality: '',
+            barangay: '',
+          },
         })
+        await uploadToDrive({ id, bytes: await file.arrayBuffer() })
         completed++
       } catch (error) {
         failed++
@@ -272,7 +275,7 @@ function FolderSkeleton() {
   )
 }
 
-function Menu(props: { onRename?: () => void; onMove: () => void; onDelete: () => void }) {
+function Menu(props: { onRename?: () => void; showFileActions?: boolean; onOpenInDrive?: () => void; onCopyLink?: () => void; onDownload?: () => void; onMove: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -311,6 +314,11 @@ function Menu(props: { onRename?: () => void; onMove: () => void; onDelete: () =
       {open ? (
         <div className="tile-menu-content">
           {props.onRename ? <button type="button" onClick={() => choose(props.onRename!)}>Rename</button> : null}
+          {props.showFileActions ? <>
+            <button type="button" disabled={!props.onOpenInDrive} onClick={() => props.onOpenInDrive && choose(props.onOpenInDrive)}>Open in Drive</button>
+            <button type="button" disabled={!props.onCopyLink} onClick={() => props.onCopyLink && choose(props.onCopyLink)}>Copy link</button>
+            <button type="button" disabled={!props.onDownload} onClick={() => props.onDownload && choose(props.onDownload)}>Download</button>
+          </> : null}
           <button type="button" onClick={() => choose(props.onMove)}>Move</button>
           <button type="button" onClick={() => choose(props.onDelete)}>Delete</button>
         </div>
@@ -411,7 +419,64 @@ function formatBytes(bytes: number) { if (bytes === 0) return '0 B'; const units
 
 type ChildrenData = {
   folders: Array<{ _id: Id<'folders'>; name: string }>
-  files: Array<{ _id: Id<'files'>; name: string; size: number; storageStatus: string }>
+  files: Array<{
+    _id: Id<'files'>
+    name: string
+    size: number
+    storageStatus: string
+    driveWebViewLink?: string
+    driveFileId?: string
+    downloadUrl?: string | null
+  }>
+}
+
+async function copyFileLink(url: string) {
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success('Link copied')
+  } catch {
+    toast.error('Could not copy the link. Please copy it from the address bar.')
+  }
+}
+
+function downloadFile(url: string, name: string) {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = name
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
+function FileMenu({ file, onMove, onDelete }: { file: ChildrenData['files'][number]; onMove: () => void; onDelete: () => void }) {
+  const createDriveDownloadToken = useMutation(api.files.createDriveDownloadToken)
+  const driveLink = file.driveWebViewLink
+  const fileLink = driveLink ?? file.downloadUrl
+  const storageDownloadUrl = file.downloadUrl
+
+  async function downloadDriveFile() {
+    const endpoint = getConvexHttpUrl('/drive-download')
+    if (!endpoint) {
+      toast.error('Download service is not configured.')
+      return
+    }
+    try {
+      const { token } = await createDriveDownloadToken({ fileId: file._id })
+      downloadFile(`${endpoint}?token=${encodeURIComponent(token)}`, file.name)
+    } catch (error) {
+      toast.error(messageFromError(error))
+    }
+  }
+
+  return <Menu
+    showFileActions
+    onOpenInDrive={driveLink ? () => window.open(driveLink, '_blank', 'noopener,noreferrer') : undefined}
+    onCopyLink={fileLink ? () => void copyFileLink(fileLink) : undefined}
+    onDownload={file.driveFileId ? () => void downloadDriveFile() : storageDownloadUrl ? () => downloadFile(storageDownloadUrl, file.name) : undefined}
+    onMove={onMove}
+    onDelete={onDelete}
+  />
 }
 
 function GridView({ data, navigate, onRename, onMove, onDelete }: { data: ChildrenData } & ViewCallbacks) {
@@ -428,14 +493,14 @@ function GridView({ data, navigate, onRename, onMove, onDelete }: { data: Childr
       {data.files.map((f) => (
         <article className="drive-tile file clickable" key={f._id} tabIndex={0} aria-label={`${f.name}, ${formatBytes(f.size)}, ${f.storageStatus}`}>
           <FileText/><strong>{f.name}</strong><small>{formatBytes(f.size)} · {f.storageStatus}</small>
-          <Menu onMove={() => onMove({ kind: 'file', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'file', id: f._id, name: f.name })} />
+          <FileMenu file={f} onMove={() => onMove({ kind: 'file', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'file', id: f._id, name: f.name })} />
         </article>
       ))}
     </div>
   )
 }
 
-function ListView({ data, navigate }: { data: ChildrenData } & ViewCallbacks) {
+function ListView({ data, navigate, onRename, onMove, onDelete }: { data: ChildrenData } & ViewCallbacks) {
   return (
     <div className="list-view">
       {[...data.folders.map((f) => ({ ...f, kind: 'folder' as const })), ...data.files.map((f) => ({ ...f, kind: 'file' as const }))].map((item) => (
@@ -445,29 +510,35 @@ function ListView({ data, navigate }: { data: ChildrenData } & ViewCallbacks) {
           <span className="list-row-icon">{item.kind === 'folder' ? <Folder className="folder-icon" size={18}/> : <FileText size={18}/>}</span>
           <span className="list-row-name">{item.name}</span>
           <span className="list-row-meta">{item.kind === 'file' ? `${formatBytes((item as any).size)} · ${(item as any).storageStatus}` : 'Folder'}</span>
-          <button type="button" className="list-row-menu" aria-label="Open item menu" onClick={(event) => event.stopPropagation()}>⋯</button>
+          <div className="list-row-menu" onClick={(event) => event.stopPropagation()}>
+            {item.kind === 'folder'
+              ? <Menu onRename={() => onRename({ id: item._id, name: item.name })} onMove={() => onMove({ kind: 'folder', itemId: item._id, name: item.name })} onDelete={() => onDelete({ kind: 'folder', id: item._id, name: item.name })} />
+              : <FileMenu file={item} onMove={() => onMove({ kind: 'file', itemId: item._id, name: item.name })} onDelete={() => onDelete({ kind: 'file', id: item._id, name: item.name })} />}
+          </div>
         </div>
       ))}
     </div>
   )
 }
 
-function DetailsView({ data, navigate }: { data: ChildrenData } & ViewCallbacks) {
+function DetailsView({ data, navigate, onRename, onMove, onDelete }: { data: ChildrenData } & ViewCallbacks) {
   return (
     <table className="details-table">
-      <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Status</th></tr></thead>
+      <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead>
       <tbody>
         {data.folders.map((f) => (
           <tr key={f._id} className="details-row" role="link" tabIndex={0} onClick={() => navigate(f._id)}
             onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(f._id) } }}>
             <td><Folder className="folder-icon" size={16}/> {f.name}</td>
             <td>Folder</td><td>—</td><td>—</td>
+            <td className="details-menu"><Menu onRename={() => onRename({ id: f._id, name: f.name })} onMove={() => onMove({ kind: 'folder', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'folder', id: f._id, name: f.name })} /></td>
           </tr>
         ))}
         {data.files.map((f) => (
           <tr key={f._id} className="details-row">
             <td><FileText size={16}/> {f.name}</td>
             <td>File</td><td>{formatBytes(f.size)}</td><td>{f.storageStatus}</td>
+            <td className="details-menu"><FileMenu file={f} onMove={() => onMove({ kind: 'file', itemId: f._id, name: f.name })} onDelete={() => onDelete({ kind: 'file', id: f._id, name: f.name })} /></td>
           </tr>
         ))}
       </tbody>

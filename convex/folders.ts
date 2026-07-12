@@ -45,9 +45,32 @@ export const listChildren = query({
         .collect(),
     ])
 
+    const filesWithAccess = await Promise.all(
+      files.map(async (file) => {
+        // Older uploads predate link metadata. A Drive file ID is enough to
+        // construct its stable viewer URL, so they remain usable too.
+        const driveWebViewLink = file.driveWebViewLink ?? (file.driveFileId
+          ? `https://drive.google.com/file/d/${encodeURIComponent(file.driveFileId)}/view`
+          : undefined)
+        const driveDownloadLink = file.driveWebContentLink ?? (file.driveFileId
+          ? `https://drive.google.com/uc?export=download&id=${encodeURIComponent(file.driveFileId)}`
+          : undefined)
+
+        return {
+          ...file,
+          driveWebViewLink,
+          // Convex Storage URLs are short-lived; Drive URLs retain the Drive
+          // permissions configured for this tenant.
+          downloadUrl: file.storageProvider === 'convex' && file.convexStorageId
+            ? await ctx.storage.getUrl(file.convexStorageId)
+            : driveDownloadLink,
+        }
+      }),
+    )
+
     return {
       folders: folders.sort((a, b) => a.name.localeCompare(b.name)),
-      files,
+      files: filesWithAccess,
     }
   },
 })
